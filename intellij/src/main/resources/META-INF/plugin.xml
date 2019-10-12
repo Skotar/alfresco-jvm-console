@@ -1,0 +1,20 @@
+<idea-plugin>
+    <id>pl.beone.intellij.plugin.AlfrescoJvmConsole</id>
+    <name>Alfresco JVM Console</name>
+    <version>1.0.0</version>
+    <vendor>BeOne</vendor>
+
+    <idea-version since-build="192"/>
+
+    <depends>com.intellij.modules.java</depends>
+    <depends optional="true" config-file="plugin-optional-kotlin.xml">org.jetbrains.kotlin</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="pl.skotar.intellij.plugin.alfrescojvmconsole.linemarker.JavaRelatedItemLineMarkerProvider"/>
+
+        <configurationType
+                implementation="pl.skotar.intellij.plugin.alfrescojvmconsole.configuration.AlfrescoJvmConsoleRunConfigurationType"/>
+    </extensions>
+
+</idea-plugin>
