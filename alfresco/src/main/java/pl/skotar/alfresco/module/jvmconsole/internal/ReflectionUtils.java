@@ -2,6 +2,7 @@ package pl.skotar.alfresco.module.jvmconsole.internal;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.security.Permission;
 import java.util.Arrays;
 
 class ReflectionUtils {
@@ -23,15 +24,27 @@ class ReflectionUtils {
     }
 
     static Object invokeNoArgumentFunction(Object instance, String name) throws Throwable {
-        Class<?> clazz = instance.getClass();
+        SecurityManager defaultSecurityManager = System.getSecurityManager();
+        System.setSecurityManager(new SecurityManager() {
+            @Override
+            public void checkPermission(Permission perm) {
+                // deliberately omitted. Permit everything
+            }
+        });
+
         try {
-            return Arrays.stream(clazz.getMethods())
-                         .filter(method -> validateMethod(method, name))
-                         .findFirst()
-                         .orElseThrow(() -> new IllegalStateException("Class <" + clazz.getCanonicalName() + "> doesn't contain no-argument <" + name + "> function"))
-                         .invoke(instance);
-        } catch (InvocationTargetException e) {
-            throw unwrapException(e);
+            Class<?> clazz = instance.getClass();
+            try {
+                return Arrays.stream(clazz.getMethods())
+                             .filter(method -> validateMethod(method, name))
+                             .findFirst()
+                             .orElseThrow(() -> new IllegalStateException("Class <" + clazz.getCanonicalName() + "> doesn't contain no-argument <" + name + "> function"))
+                             .invoke(instance);
+            } catch (InvocationTargetException e) {
+                throw unwrapException(e);
+            }
+        } finally {
+            System.setSecurityManager(defaultSecurityManager);
         }
     }
 
