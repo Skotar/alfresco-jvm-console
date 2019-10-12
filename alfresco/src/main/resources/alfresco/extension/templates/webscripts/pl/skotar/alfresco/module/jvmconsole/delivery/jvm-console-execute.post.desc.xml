@@ -1,0 +1,7 @@
+<webscript>
+    <shortname>JVM Console</shortname>
+    <description>Executes bytecode</description>
+    <url>/jvm-console/execute</url>
+    <format default="json"/>
+    <authentication>admin</authentication>
+</webscript>

@@ -28,7 +28,7 @@ purge() {
 }
 
 build() {
-    $MVN_EXEC clean package
+    $MVN_EXEC clean package -DskipTests=true
 }
 
 tail() {

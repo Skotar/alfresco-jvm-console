@@ -78,7 +78,7 @@ EXIT /B 0
     )
 EXIT /B 0
 :build
-	call %MVN_EXEC% clean package
+	call %MVN_EXEC% clean package -DskipTests=true
 EXIT /B 0
 :tail
     docker-compose -f "%COMPOSE_FILE_PATH%" logs -f

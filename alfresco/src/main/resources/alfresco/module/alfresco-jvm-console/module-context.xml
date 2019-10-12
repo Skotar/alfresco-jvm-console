@@ -23,6 +23,6 @@
 
 	<context:component-scan base-package="pl.skotar.alfresco.module.jvmconsole.configuration"/>
 
-	<import resource="classpath:alfresco/module/${project.artifactId}/context/bootstrap-context.xml" />
+	<import resource="classpath:alfresco/module/${project.artifactId}/context/webscript-context.xml" />
 
 </beans>
