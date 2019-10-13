@@ -2,7 +2,7 @@
     <id>pl.beone.intellij.plugin.AlfrescoJvmConsole</id>
     <name>Alfresco JVM Console</name>
     <version>1.0.0</version>
-    <vendor>BeOne</vendor>
+    <vendor>Bartosz Skotarek</vendor>
 
     <idea-version since-build="192"/>
 

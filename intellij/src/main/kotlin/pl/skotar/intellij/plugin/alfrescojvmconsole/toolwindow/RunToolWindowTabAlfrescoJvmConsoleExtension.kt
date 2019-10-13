@@ -15,11 +15,12 @@ internal fun RunToolWindowTab.newLine() {
     println()
 }
 
-internal fun RunToolWindowTab.logSuccess(result: List<String>, executionTimeMillis: Long) {
+internal fun RunToolWindowTab.logExecutionTime(executionTimeMillis: Long) {
     println("Executed in <${calculateTimeInSeconds(executionTimeMillis)} s>")
-    newLine()
+}
 
-    result.forEach {
+internal fun RunToolWindowTab.logSuccess(messages: List<String>) {
+    messages.forEach {
         print(it, ConsoleViewContentType.USER_INPUT)
         println()
     }

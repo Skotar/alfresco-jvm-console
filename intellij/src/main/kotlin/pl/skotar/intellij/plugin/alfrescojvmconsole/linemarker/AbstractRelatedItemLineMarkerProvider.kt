@@ -7,8 +7,10 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.compiler.CompilerManager
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.idea.util.projectStructure.allModules
+import pl.skotar.intellij.plugin.alfrescojvmconsole.client.HttpModuleClient
+import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ClientException
+import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ClientExecutionException
 import pl.skotar.intellij.plugin.alfrescojvmconsole.configuration.AlfrescoJvmConsoleRunConfiguration
-import pl.skotar.intellij.plugin.alfrescojvmconsole.executor.HttpExecutor
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.*
 import pl.skotar.intellij.plugin.alfrescojvmconsole.toolwindow.*
 import pl.skotar.intellij.plugin.alfrescojvmconsole.util.invokeLater
@@ -16,6 +18,10 @@ import java.lang.System.currentTimeMillis
 import java.util.concurrent.Executors
 
 abstract class AbstractRelatedItemLineMarkerProvider {
+
+    companion object {
+        private val moduleClient = HttpModuleClient()
+    }
 
     protected fun createOnClickHandler(
         project: Project,
@@ -76,15 +82,14 @@ abstract class AbstractRelatedItemLineMarkerProvider {
 
                 executor.submit {
                     try {
-                        val result = HttpExecutor()
-                            .execute(byteCode, qualifiedClassName, methodName, httpAddress, username, password)
-                        handleSuccessfulExecution(runToolWindowTab, result, currentTimeMillis() - startTimestamp)
+                        val messages = moduleClient.execute(byteCode, qualifiedClassName, methodName, httpAddress, username, password)
+                        handleSuccessfulExecution(runToolWindowTab, messages, startTimestamp)
                     } catch (e: Exception) {
-                        handleFailureExecution(runToolWindowTab, e)
+                        handleFailureExecution(runToolWindowTab, e, startTimestamp)
                     }
                 }.also { future -> runToolWindowTab.onClose { future.cancel(true) } }
             } catch (e: Throwable) {
-                handleFailureExecution(runToolWindowTab, e)
+                handleFailureExecution(runToolWindowTab, e, startTimestamp)
             } finally {
                 executor.shutdown()
             }
@@ -104,16 +109,31 @@ abstract class AbstractRelatedItemLineMarkerProvider {
             ?: throw IllegalStateException("There is no <$qualifiedClassName> class in target folder")
     }
 
-    private fun handleSuccessfulExecution(runToolWindowTab: RunToolWindowTab, result: List<String>, executionTimeMillis: Long) {
+    private fun handleSuccessfulExecution(runToolWindowTab: RunToolWindowTab, messages: List<String>, startTimestamp: Long) {
         invokeLater {
-            runToolWindowTab.logSuccess(result, executionTimeMillis)
+            runToolWindowTab.logExecutionTime(currentTimeMillis() - startTimestamp)
+            runToolWindowTab.newLine()
+            runToolWindowTab.logSuccess(messages)
         }
     }
 
-    private fun handleFailureExecution(runToolWindowTab: RunToolWindowTab, throwable: Throwable) {
+    private fun handleFailureExecution(runToolWindowTab: RunToolWindowTab, throwable: Throwable, startTimestamp: Long) {
         invokeLater {
-            runToolWindowTab.newLine()
-            runToolWindowTab.logFailureThrowable(throwable.toFullString())
+            when (throwable) {
+                is ClientExecutionException -> {
+                    runToolWindowTab.logExecutionTime(currentTimeMillis() - startTimestamp)
+                    runToolWindowTab.newLine()
+                    runToolWindowTab.logFailureThrowable(throwable.message!!)
+                }
+                is ClientException -> {
+                    runToolWindowTab.newLine()
+                    runToolWindowTab.logFailureThrowable(throwable.message!!)
+                }
+                else -> {
+                    runToolWindowTab.newLine()
+                    runToolWindowTab.logFailureThrowable(throwable.toFullString())
+                }
+            }
         }
     }
 }
