@@ -37,17 +37,17 @@ internal class RunToolWindowTab(private val project: Project) {
         }
     }
 
-    fun print(message: String) {
-        consoleView.print(message, ConsoleViewContentType.NORMAL_OUTPUT)
+    fun print(message: String, contentType: ConsoleViewContentType = ConsoleViewContentType.NORMAL_OUTPUT) {
+        consoleView.print(message, contentType)
     }
 
     fun print(file: File) {
         consoleView.printHyperlink(file.path, LocalFileHyperlinkInfo(file.path, 0, 0))
     }
 
-    fun println(message: String = "") {
-        print(message)
-        consoleView.print("\n", ConsoleViewContentType.NORMAL_OUTPUT)
+    fun println(message: String = "", contentType: ConsoleViewContentType = ConsoleViewContentType.NORMAL_OUTPUT) {
+        print(message, contentType)
+        consoleView.print("\n", contentType)
     }
 
     fun printlnError(message: String) {

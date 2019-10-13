@@ -10,6 +10,8 @@ class AlfrescoJvmConsoleSettingsEditor : SettingsEditor<AlfrescoJvmConsoleRunCon
     internal lateinit var hostTextField: JTextField
     internal lateinit var pathTextField: JTextField
     internal lateinit var portSpinner: JSpinner
+    internal lateinit var usernameTextField: JTextField
+    internal lateinit var passwordField: JPasswordField
 
     override fun createEditor(): JComponent {
         portSpinner.setEditorWithoutGroupingAndModel(Port.RANGE.first, Port.RANGE.last)
@@ -26,11 +28,15 @@ class AlfrescoJvmConsoleSettingsEditor : SettingsEditor<AlfrescoJvmConsoleRunCon
         hostTextField.text = configuration.host
         pathTextField.text = configuration.path
         portSpinner.value = configuration.port
+        usernameTextField.text = configuration.username
+        passwordField.text = configuration.password
     }
 
     override fun applyEditorTo(configuration: AlfrescoJvmConsoleRunConfiguration) {
         configuration.host = hostTextField.text
         configuration.path = pathTextField.text
         configuration.port = portSpinner.value.toString().toInt()
+        configuration.username = usernameTextField.text
+        configuration.password = String(passwordField.password)
     }
 }

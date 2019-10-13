@@ -8,7 +8,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 
-internal class JvmConsoleLineMarkerInfo<T : PsiElement>(
+internal class AlfrescoJvmConsoleLineMarkerInfo<T : PsiElement>(
     element: T,
     private val executeOnClick: () -> Unit
 ) : LineMarkerInfo<T>(

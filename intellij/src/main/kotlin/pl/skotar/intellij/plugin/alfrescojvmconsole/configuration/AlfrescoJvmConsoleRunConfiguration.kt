@@ -12,8 +12,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.util.xmlb.XmlSerializer
 import org.jdom.Element
 import pl.skotar.intellij.plugin.alfrescojvmconsole.configuration.AlfrescoJvmConsoleRunConfigurationValidator.Host
+import pl.skotar.intellij.plugin.alfrescojvmconsole.configuration.AlfrescoJvmConsoleRunConfigurationValidator.Password
 import pl.skotar.intellij.plugin.alfrescojvmconsole.configuration.AlfrescoJvmConsoleRunConfigurationValidator.Path
 import pl.skotar.intellij.plugin.alfrescojvmconsole.configuration.AlfrescoJvmConsoleRunConfigurationValidator.Port
+import pl.skotar.intellij.plugin.alfrescojvmconsole.configuration.AlfrescoJvmConsoleRunConfigurationValidator.Username
 
 class AlfrescoJvmConsoleRunConfiguration(
     project: Project,
@@ -24,6 +26,8 @@ class AlfrescoJvmConsoleRunConfiguration(
     internal var host: String = ""
     internal var path: String = ""
     internal var port: Int = 8080
+    internal var username: String = ""
+    internal var password: String = ""
 
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> =
         AlfrescoJvmConsoleSettingsEditor()
@@ -45,6 +49,14 @@ class AlfrescoJvmConsoleRunConfiguration(
 
         if (!Port.validate(port)) {
             throw RuntimeConfigurationError("Port must be in range ${Port.RANGE.toDescription()}")
+        }
+
+        if (!Username.validate(username)) {
+            throw RuntimeConfigurationError("Username must be set")
+        }
+
+        if (!Password.validate(username)) {
+            throw RuntimeConfigurationError("Password must be set")
         }
     }
 

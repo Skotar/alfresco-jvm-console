@@ -18,4 +18,14 @@ object AlfrescoJvmConsoleRunConfigurationValidator {
         fun validate(value: Int): Boolean =
             RANGE.contains(value)
     }
+
+    object Username {
+        fun validate(value: String): Boolean =
+            value.isNotBlank()
+    }
+
+    object Password {
+        fun validate(value: String): Boolean =
+            value.isNotBlank()
+    }
 }

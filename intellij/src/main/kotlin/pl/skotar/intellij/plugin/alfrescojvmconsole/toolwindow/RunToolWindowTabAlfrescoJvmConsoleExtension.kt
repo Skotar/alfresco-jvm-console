@@ -1,5 +1,6 @@
 package pl.skotar.intellij.plugin.alfrescojvmconsole.toolwindow
 
+import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.icons.AllIcons
 
 internal fun RunToolWindowTab.logStart(tabName: String, httpAddress: String) {
@@ -15,14 +16,13 @@ internal fun RunToolWindowTab.newLine() {
 }
 
 internal fun RunToolWindowTab.logSuccess(result: List<String>, executionTimeMillis: Long) {
-    println(
-        "Executed in <${calculateTimeInSeconds(executionTimeMillis)} s>" + if (result.isNotEmpty()) ":" else ""
-    )
+    println("Executed in <${calculateTimeInSeconds(executionTimeMillis)} s>")
+    newLine()
+
     result.forEach {
-        print(it)
+        print(it, ConsoleViewContentType.USER_INPUT)
         println()
     }
-    println("")
     scrollToTheBeginning()
 }
 
