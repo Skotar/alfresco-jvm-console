@@ -2,19 +2,20 @@ package pl.skotar.intellij.plugin.alfrescojvmconsole.linemarker
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
-import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.idea.refactoring.fqName.getKotlinFqName
+import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtNamedFunction
-import org.jetbrains.kotlin.psi.psiUtil.children
+import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.psiUtil.containingClass
+import org.jetbrains.kotlin.psi.psiUtil.isPublic
+import org.jetbrains.kotlin.psi.psiUtil.parents
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.getActiveFile
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.isFileInAnyModule
 
 class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedItemLineMarkerProvider() {
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        return null
-
         val project = element.project
 
         if (isKtNamedFunction(element)) {
@@ -22,15 +23,16 @@ class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedI
 
             if (
                 project.isFileInAnyModule(project.getActiveFile()) &&
-                startsWithPromena(ktNamedFunction) &&
-                isNotInClass(ktNamedFunction) &&
+                startsWithAlfresco(ktNamedFunction) &&
+                isInClass(ktNamedFunction) &&
+                ktNamedFunction.isPublic &&
                 hasNoParameters(ktNamedFunction)
             ) {
                 return AlfrescoJvmConsoleLineMarkerInfo(
                     element,
                     createOnClickHandler(
                         project,
-                        { ktNamedFunction.getClassQualifiedName() },
+                        { getClassQualifiedName(ktNamedFunction) },
                         { ktNamedFunction.name!! }
                     )
                 )
@@ -47,20 +49,16 @@ class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedI
     private fun isKtNamedFunction(element: PsiElement): Boolean =
         element is KtNamedFunction
 
-    private fun startsWithPromena(function: KtNamedFunction): Boolean =
-        function.nameAsSafeName.asString().startsWith("promena", true)
+    private fun startsWithAlfresco(function: KtNamedFunction): Boolean =
+        function.nameAsSafeName.asString().startsWith("alfresco", true)
 
-    private fun isNotInClass(function: KtNamedFunction): Boolean =
-        function.containingClass() == null
+    private fun isInClass(function: KtNamedFunction): Boolean =
+        function.parents.filterIsInstance<KtClass>().count() == 1 &&
+                function.parents.filterIsInstance<KtObjectDeclaration>().count() == 0
 
     private fun hasNoParameters(function: KtNamedFunction): Boolean =
         function.valueParameterList?.parameters?.size == 0
 
-    private fun KtNamedFunction.getClassQualifiedName(): String =
-        containingKtFile.packageFqName.asString() + "." + containingKtFile.name.removeSuffix(".kt") + "Kt"
-
-    private fun getMethodComments(function: KtNamedFunction): List<String> =
-        function.bodyBlockExpression!!.children()
-            .filterIsInstance<PsiComment>().map { it.text }
-            .toList()
+    private fun getClassQualifiedName(function: KtNamedFunction): String =
+        function.containingClass()!!.getKotlinFqName()!!.asString()
 }

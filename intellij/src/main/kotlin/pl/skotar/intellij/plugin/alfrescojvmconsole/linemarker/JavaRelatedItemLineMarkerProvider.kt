@@ -22,7 +22,7 @@ class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedIte
             if (
                 project.isFileInAnyModule(activeFile) &&
                 startsWithAlfresco(psiMethod) &&
-                isNotInInnerClass(psiMethod) &&
+                isInClass(psiMethod) &&
                 isPublicNotStatic(psiMethod) &&
                 hasNoParameters(psiMethod)
             ) {
@@ -50,7 +50,7 @@ class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedIte
     private fun startsWithAlfresco(method: PsiMethod): Boolean =
         method.name.startsWith("alfresco", true)
 
-    private fun isNotInInnerClass(psiMethod: PsiMethod): Boolean =
+    private fun isInClass(psiMethod: PsiMethod): Boolean =
         psiMethod.parents
             .filterIsInstance<PsiClass>()
             .count() == 1

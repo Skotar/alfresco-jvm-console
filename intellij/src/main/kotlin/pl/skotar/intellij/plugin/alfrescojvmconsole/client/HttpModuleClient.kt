@@ -56,6 +56,7 @@ class HttpModuleClient {
         when (statusCode) {
             HTTP_UNAUTHORIZED -> throw ClientException("Bad credentials. Check if the given user has administrator permissions")
             HTTP_NOT_FOUND -> throw ClientException("Alfresco Content Services not found. Check if the given parameters point to the running server")
+            HTTP_INTERNAL_ERROR -> throw ClientException("An error occurred on Alfresco Content Services. Check logs for more details")
             else -> throw ClientException(entityString)
         }
     }
