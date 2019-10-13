@@ -1,6 +1,5 @@
 package pl.skotar.alfresco.module.jvmconsole.internal;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.Permission;
 import java.util.Arrays;
@@ -34,25 +33,13 @@ class ReflectionUtils {
 
         try {
             Class<?> clazz = instance.getClass();
-            try {
-                return Arrays.stream(clazz.getMethods())
-                             .filter(method -> validateMethod(method, name))
-                             .findFirst()
-                             .orElseThrow(() -> new IllegalStateException("Class <" + clazz.getCanonicalName() + "> doesn't contain no-argument <" + name + "> function"))
-                             .invoke(instance);
-            } catch (InvocationTargetException e) {
-                throw unwrapException(e);
-            }
+            return Arrays.stream(clazz.getMethods())
+                         .filter(method -> validateMethod(method, name))
+                         .findFirst()
+                         .orElseThrow(() -> new IllegalStateException("Class <" + clazz.getCanonicalName() + "> doesn't contain no-argument <" + name + "> function"))
+                         .invoke(instance);
         } finally {
             System.setSecurityManager(defaultSecurityManager);
-        }
-    }
-
-    private static Throwable unwrapException(InvocationTargetException e) {
-        if (e.getCause() != null) {
-            return e.getCause();
-        } else {
-            return e;
         }
     }
 

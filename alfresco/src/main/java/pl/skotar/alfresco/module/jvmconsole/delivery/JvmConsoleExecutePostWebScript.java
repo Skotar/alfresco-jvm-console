@@ -9,6 +9,7 @@ import org.springframework.extensions.webscripts.WebScriptResponse;
 import pl.skotar.alfresco.module.jvmconsole.internal.Executor;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
@@ -23,7 +24,6 @@ public class JvmConsoleExecutePostWebScript extends AbstractWebScript {
 
     private static final String OCTET_APPLICATION_OCTET_STREAM = APPLICATION_OCTET_STREAM.getMimeType();
 
-
     private final Executor executor;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -33,7 +33,7 @@ public class JvmConsoleExecutePostWebScript extends AbstractWebScript {
     }
 
     @Override
-    public void execute(WebScriptRequest request, WebScriptResponse response) {
+    public void execute(WebScriptRequest request, WebScriptResponse response) throws IOException {
         validate(request);
 
         String canonicalClassName = getCanonicalClassNameParameter(request);
@@ -41,8 +41,13 @@ public class JvmConsoleExecutePostWebScript extends AbstractWebScript {
 
         try {
             byte[] byteCode = IOUtils.toByteArray(request.getContent().getInputStream());
-            List<String> result = executor.execute(byteCode, canonicalClassName, functionName);
-            writeResponse(response, result);
+            List<String> messages = executor.execute(byteCode, canonicalClassName, functionName);
+
+            setResponseContentHeader(response);
+            objectMapper.writeValue(response.getOutputStream(), Response.of(messages));
+        } catch (InvocationTargetException e) {
+            setResponseContentHeader(response);
+            objectMapper.writeValue(response.getOutputStream(), Response.of(e.getCause()));
         } catch (Throwable throwable) {
             throw new WebScriptException(HTTP_INTERNAL_ERROR, throwable.getMessage(), throwable);
         }
@@ -73,9 +78,8 @@ public class JvmConsoleExecutePostWebScript extends AbstractWebScript {
         }
     }
 
-    private void writeResponse(WebScriptResponse response, List<String> result) throws IOException {
+    private void setResponseContentHeader(WebScriptResponse response) {
         response.setContentType(APPLICATION_JSON.getMimeType());
         response.setContentEncoding(APPLICATION_JSON.getCharset().displayName());
-        objectMapper.writeValue(response.getOutputStream(), result);
     }
 }
