@@ -1,16 +1,20 @@
 package pl.skotar.alfresco.module.jvmconsole.internal;
 
+import pl.skotar.alfresco.module.jvmconsole.internal.Executor.ClassByteCode;
+
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.Permission;
 import java.util.Arrays;
+import java.util.List;
 
 class ReflectionUtils {
 
     private ReflectionUtils() {
     }
 
-    static Class<?> loadClass(ClassLoader parent, byte[] byteCode, String canonicalClassName) throws ClassNotFoundException {
-        return new ClassByteCodeClassLoader(parent, byteCode, canonicalClassName)
+    static Class<?> loadClass(ClassLoader parent, List<ClassByteCode> classByteCodes, String canonicalClassName) throws ClassNotFoundException {
+        return new ClassByteCodeClassLoader(parent, classByteCodes)
                 .loadClass(canonicalClassName);
     }
 
@@ -22,7 +26,7 @@ class ReflectionUtils {
                      .newInstance();
     }
 
-    static Object invokeNoArgumentFunction(Object instance, String name) throws Throwable {
+    static Object invokeNoArgumentFunction(Object instance, String name) throws InvocationTargetException, IllegalAccessException {
         SecurityManager defaultSecurityManager = System.getSecurityManager();
         System.setSecurityManager(new SecurityManager() {
             @Override

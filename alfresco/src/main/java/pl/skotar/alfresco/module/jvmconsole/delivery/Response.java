@@ -11,9 +11,9 @@ class Response {
 
     private static class ExceptionResponse {
 
-        private String canonicalClassName;
-        private String message;
-        private List<String> stackTrace;
+        private final String canonicalClassName;
+        private final String message;
+        private final List<String> stackTrace;
 
         private ExceptionResponse(String canonicalClassName, String message, List<String> stackTrace) {
             this.canonicalClassName = canonicalClassName;
@@ -34,9 +34,9 @@ class Response {
         }
     }
 
-    private Boolean successfully;
-    private ExceptionResponse exception;
-    private List<String> messages;
+    private final Boolean successfully;
+    private final ExceptionResponse exception;
+    private final List<String> messages;
 
     private Response(Boolean successfully, ExceptionResponse exception, List<String> messages) {
         this.successfully = successfully;
@@ -52,18 +52,18 @@ class Response {
         return new Response(false,
                             new ExceptionResponse(throwable.getClass().getCanonicalName(),
                                                   throwable.getMessage(),
-                                                  convertStackTraceAndRemoveImplementationDetails(throwable)),
+                                                  convertStackTraceAndRemoveReflectionDetails(throwable)),
                             null);
     }
 
-    private static List<String> convertStackTraceAndRemoveImplementationDetails(Throwable throwable) {
+    private static List<String> convertStackTraceAndRemoveReflectionDetails(Throwable throwable) {
         return ExceptionUtils.getThrowableList(throwable).stream()
-                             .map(it -> removeImplementationDetails(ExceptionUtils.getStackTrace(it).split("\n")))
+                             .map(it -> removeReflectionDetails(ExceptionUtils.getStackTrace(it).split("\n")))
                              .flatMap(Collection::stream)
                              .collect(Collectors.toList());
     }
 
-    private static List<String> removeImplementationDetails(String[] stackTrace) {
+    private static List<String> removeReflectionDetails(String[] stackTrace) {
         return Stream.of(stackTrace)
                      .takeWhile(it -> !it.contains("jdk.internal.reflect.NativeMethodAccessorImpl.invoke0"))
                      .collect(Collectors.toList());

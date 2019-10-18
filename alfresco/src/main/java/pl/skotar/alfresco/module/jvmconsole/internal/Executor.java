@@ -14,16 +14,18 @@ public class Executor {
         this.beanInjector = new BeanInjector(autowireCapableBeanFactory);
     }
 
-    public List<String> execute(byte[] byteCode, String canonicalClassName, String functionName) throws Throwable {
-        Class<?> clazz = ReflectionUtils.loadClass(this.getClass().getClassLoader(), byteCode, canonicalClassName);
+    public List<String> execute(List<ClassByteCode> classByteCodes,
+                                String canonicalClassName,
+                                String functionName) throws ReflectiveOperationException {
+        Class<?> clazz = ReflectionUtils.loadClass(this.getClass().getClassLoader(), classByteCodes, canonicalClassName);
         Object instance = ReflectionUtils.createInstanceUsingNoArgumentConstructor(clazz);
         beanInjector.inject(instance);
         Object result = ReflectionUtils.invokeNoArgumentFunction(instance, functionName);
-        return processResult(result);
+        return processMessages(result);
     }
 
     @SuppressWarnings("unchecked")
-    private List<String> processResult(Object result) {
+    private List<String> processMessages(Object result) {
         if (result == null) {
             return Collections.emptyList();
         } else if (result instanceof List) {
@@ -32,6 +34,17 @@ public class Executor {
                                           .collect(Collectors.toList());
         } else {
             return Collections.singletonList(result.toString());
+        }
+    }
+
+    public static class ClassByteCode {
+
+        final String canonicalClassName;
+        final byte[] byteCode;
+
+        public ClassByteCode(String canonicalClassName, byte[] byteCode) {
+            this.canonicalClassName = canonicalClassName;
+            this.byteCode = byteCode;
         }
     }
 }
