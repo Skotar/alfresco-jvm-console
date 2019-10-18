@@ -6,11 +6,13 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiIdentifier
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.impl.source.PsiJavaFileImpl
 import org.jetbrains.kotlin.psi.psiUtil.parents
+import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassDescriptor
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.getActiveFile
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.isFileInAnyModule
 
-class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedItemLineMarkerProvider() {
+internal class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedItemLineMarkerProvider() {
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
         val project = element.project
@@ -26,14 +28,9 @@ class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedIte
                 isPublicNotStatic(psiMethod) &&
                 hasNoParameters(psiMethod)
             ) {
-                return AlfrescoJvmConsoleLineMarkerInfo(
-                    element,
-                    createOnClickHandler(
-                        project,
-                        { psiMethod.getClassQualifiedName() },
-                        { psiMethod.name }
-                    )
-                )
+                return AlfrescoJvmConsoleLineMarkerInfo(element, createOnClickHandler(project) {
+                    ClassDescriptor(getPackageName(psiMethod), getClassName(psiMethod), getFunctionName(psiMethod))
+                })
             }
         }
 
@@ -61,6 +58,12 @@ class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedIte
     private fun hasNoParameters(method: PsiMethod): Boolean =
         method.parameters.isEmpty()
 
-    private fun PsiMethod.getClassQualifiedName(): String =
-        containingClass!!.qualifiedName!!
+    private fun getPackageName(method: PsiMethod): String =
+        (method.containingFile as PsiJavaFileImpl).packageName
+
+    private fun getClassName(method: PsiMethod): String =
+        method.containingClass!!.name!!
+
+    private fun getFunctionName(method: PsiMethod): String =
+        method.name
 }

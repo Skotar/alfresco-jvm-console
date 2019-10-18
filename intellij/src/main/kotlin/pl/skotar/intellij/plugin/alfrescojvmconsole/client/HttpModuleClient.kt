@@ -4,21 +4,27 @@ import com.google.gson.Gson
 import org.apache.http.HttpHeaders.AUTHORIZATION
 import org.apache.http.client.methods.CloseableHttpResponse
 import org.apache.http.client.methods.HttpPost
-import org.apache.http.entity.ByteArrayEntity
-import org.apache.http.entity.ContentType.APPLICATION_OCTET_STREAM
+import org.apache.http.entity.ContentType
+import org.apache.http.entity.mime.HttpMultipartMode
+import org.apache.http.entity.mime.MultipartEntityBuilder
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.util.EntityUtils
+import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassByteCode
+import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassDescriptor
+import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.HttpConfigurationParameters
 import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ClientException
 import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ClientExecutionException
 import java.net.HttpURLConnection.*
 import java.util.*
 
-class HttpModuleClient {
+internal class HttpModuleClient {
 
     companion object {
         private const val EXECUTE_WEBSCRIPT_PATH = "/service/jvm-console/execute"
         private const val PARAMETER_CANONICAL_CLASS_NAME = "canonicalClassName"
         private const val PARAMETER_FUNCTION_NAME = "functionName"
+
+        private val applicationJavaVmMimetypeContentType = ContentType.create("application/java-vm")
 
         private val httpClientBuilder by lazy { HttpClientBuilder.create().build() }
 
@@ -26,17 +32,17 @@ class HttpModuleClient {
     }
 
     fun execute(
-        byteCode: ByteArray,
-        canonicalClassName: String,
-        functionName: String,
-        httpAddress: String,
-        username: String,
-        password: String
+        classDescriptor: ClassDescriptor,
+        httpConfigurationParameters: HttpConfigurationParameters,
+        classByteCodes: List<ClassByteCode>
     ): List<String> =
         httpClientBuilder.execute(
-            HttpPost(httpAddress + EXECUTE_WEBSCRIPT_PATH + createUrlParameters(canonicalClassName, functionName))
-                .setAuthorization(username, password)
-                .setByteArrayEntity(byteCode)
+            HttpPost(
+                httpConfigurationParameters.getAddress() + EXECUTE_WEBSCRIPT_PATH +
+                        createUrlParameters(classDescriptor.canonicalClassName, classDescriptor.functionName)
+            )
+                .setAuthorization(httpConfigurationParameters.username, httpConfigurationParameters.password)
+                .setMultiPartEntity(classByteCodes)
         ).use { response ->
             val entityString = response.getEntityString()
 
@@ -55,7 +61,7 @@ class HttpModuleClient {
 
         when (statusCode) {
             HTTP_UNAUTHORIZED -> throw ClientException("Bad credentials. Check if the given user has administrator permissions")
-            HTTP_NOT_FOUND -> throw ClientException("Alfresco Content Services not found. Check if the given parameters point to the running server")
+            HTTP_NOT_FOUND -> throw ClientException("Alfresco Content Services or alfresco-jvm-console AMP not found. Check if the given parameters point to the running server and alfresco-jvm-console AMP is installed")
             HTTP_INTERNAL_ERROR -> throw ClientException("An error occurred on Alfresco Content Services. Check logs for more details")
             else -> throw ClientException(entityString)
         }
@@ -70,9 +76,14 @@ class HttpModuleClient {
             setHeader(AUTHORIZATION, "Basic $encoding")
         }
 
-    private fun HttpPost.setByteArrayEntity(byteCode: ByteArray): HttpPost =
+    private fun HttpPost.setMultiPartEntity(classByteCodes: List<ClassByteCode>): HttpPost =
         this.apply {
-            entity = ByteArrayEntity(byteCode, APPLICATION_OCTET_STREAM)
+            entity = MultipartEntityBuilder.create().apply {
+                setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
+                classByteCodes.forEach { (canonicalClassName, byteCode) ->
+                    addBinaryBody(canonicalClassName, byteCode, applicationJavaVmMimetypeContentType, null)
+                }
+            }.build()
         }
 
     private fun processResponse(response: Response): List<String> =

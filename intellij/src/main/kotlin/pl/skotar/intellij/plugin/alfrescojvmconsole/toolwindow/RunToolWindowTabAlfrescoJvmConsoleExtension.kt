@@ -3,12 +3,12 @@ package pl.skotar.intellij.plugin.alfrescojvmconsole.toolwindow
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.icons.AllIcons
 
-internal fun RunToolWindowTab.logStart(tabName: String, httpAddress: String) {
+internal fun RunToolWindowTab.logStart(tabName: String, address: String) {
     create(tabName)
     setIcon(AllIcons.RunConfigurations.TestState.Run)
     show()
 
-    println("Executing on Alfresco <$httpAddress>...")
+    println("Executing on Alfresco <$address>...")
 }
 
 internal fun RunToolWindowTab.newLine() {

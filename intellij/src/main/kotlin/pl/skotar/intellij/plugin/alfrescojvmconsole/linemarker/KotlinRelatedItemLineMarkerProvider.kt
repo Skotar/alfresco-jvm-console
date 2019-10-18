@@ -3,17 +3,18 @@ package pl.skotar.intellij.plugin.alfrescojvmconsole.linemarker
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.psi.PsiElement
-import org.jetbrains.kotlin.idea.refactoring.fqName.getKotlinFqName
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.psiUtil.containingClass
 import org.jetbrains.kotlin.psi.psiUtil.isPublic
 import org.jetbrains.kotlin.psi.psiUtil.parents
+import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassDescriptor
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.getActiveFile
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.isFileInAnyModule
 
-class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedItemLineMarkerProvider() {
+internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedItemLineMarkerProvider() {
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
         val project = element.project
@@ -28,14 +29,9 @@ class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedI
                 ktNamedFunction.isPublic &&
                 hasNoParameters(ktNamedFunction)
             ) {
-                return AlfrescoJvmConsoleLineMarkerInfo(
-                    element,
-                    createOnClickHandler(
-                        project,
-                        { getClassQualifiedName(ktNamedFunction) },
-                        { ktNamedFunction.name!! }
-                    )
-                )
+                return AlfrescoJvmConsoleLineMarkerInfo(element, createOnClickHandler(project) {
+                    ClassDescriptor(getPackageName(ktNamedFunction), getClassName(ktNamedFunction), getFunctionName(ktNamedFunction))
+                })
             }
         }
 
@@ -59,6 +55,12 @@ class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedI
     private fun hasNoParameters(function: KtNamedFunction): Boolean =
         function.valueParameterList?.parameters?.size == 0
 
-    private fun getClassQualifiedName(function: KtNamedFunction): String =
-        function.containingClass()!!.getKotlinFqName()!!.asString()
+    private fun getPackageName(function: KtNamedFunction): String =
+        (function.containingFile as KtFile).packageFqName.asString()
+
+    private fun getClassName(function: KtNamedFunction): String =
+        function.containingClass()!!.name!!
+
+    private fun getFunctionName(function: KtNamedFunction): String =
+        function.name!!
 }
