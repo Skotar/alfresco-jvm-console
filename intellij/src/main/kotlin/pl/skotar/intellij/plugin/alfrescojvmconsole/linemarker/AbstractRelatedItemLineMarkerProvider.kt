@@ -5,6 +5,7 @@ import com.intellij.execution.configurations.RuntimeConfigurationException
 import com.intellij.execution.impl.RunDialog
 import com.intellij.openapi.compiler.CompilerManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import org.jetbrains.kotlin.idea.util.projectStructure.allModules
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassByteCode
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassDescriptor
@@ -70,7 +71,6 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
     private fun executeOnAlfresco(project: Project, classDescriptor: ClassDescriptor, httpConfigurationParameters: HttpConfigurationParameters) {
         val startTimestamp = currentTimeMillis()
 
-//        ApplicationManager.getApplication().runWriteAction {
         val runToolWindowTab = RunToolWindowTab(project)
             .also { it.logStart(createTabName(classDescriptor.className, classDescriptor.functionName), httpConfigurationParameters.getAddress()) }
 
@@ -91,7 +91,6 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
         } finally {
             executor.shutdown()
         }
-//        }
     }
 
     private fun createTabName(className: String, functionName: String): String =
@@ -99,20 +98,21 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
 
     private fun determineClassCodeBytes(project: Project, classDescriptor: ClassDescriptor): List<ClassByteCode> {
         val relativePath = classDescriptor.packageName.replace(".", "/")
-        val classByteCodes = (project.getActiveModule()
+        val classByteCodes = project.getActiveModule()
             .getOutputFolders()
             .mapNotNull { it.findFileByRelativePath(relativePath) }
-            .firstOrNull()
-            ?.children
-            ?.filter { it.name.startsWith(classDescriptor.className) }
-            ?.map { ClassByteCode(classDescriptor.packageName + "." + it.name.removeSuffix(".class"), it.inputStream.readBytes()) }
-            ?: throw IllegalStateException("There is no <$relativePath> folder in target"))
+            .flatMap { getClassByteCodesForClassInFolder(it, classDescriptor) }
 
         check(classByteCodes.map(ClassByteCode::canonicalClassName).contains(classDescriptor.canonicalClassName))
-        { "There is no <$relativePath/${classDescriptor.className}.class> file in target folder" }
+        { "There is no <$relativePath/${classDescriptor.className}.class> file in any output folder. Try to rebuild module manually" }
 
         return classByteCodes
     }
+
+    private fun getClassByteCodesForClassInFolder(virtualFile: VirtualFile, classDescriptor: ClassDescriptor): List<ClassByteCode> =
+        virtualFile.children
+            .filter { it.name.startsWith(classDescriptor.className) }
+            .map { ClassByteCode(classDescriptor.packageName + "." + it.name.removeSuffix(".class"), it.inputStream.readBytes()) }
 
     private fun handleSuccessfulExecution(runToolWindowTab: RunToolWindowTab, messages: List<String>, startTimestamp: Long) {
         invokeLater {

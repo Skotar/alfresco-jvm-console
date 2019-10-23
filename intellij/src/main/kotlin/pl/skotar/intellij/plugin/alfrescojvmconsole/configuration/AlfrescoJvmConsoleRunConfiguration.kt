@@ -23,10 +23,10 @@ class AlfrescoJvmConsoleRunConfiguration(
     name: String
 ) : RunConfigurationBase<AlfrescoJvmConsoleSettingsEditor>(project, factory, name) {
 
-    internal var host: String = ""
-    internal var path: String = ""
+    internal var host: String = "localhost"
+    internal var path: String = "alfresco"
     internal var port: Int = 8080
-    internal var username: String = ""
+    internal var username: String = "admin"
     internal var password: String = ""
 
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> =
