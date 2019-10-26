@@ -11,6 +11,9 @@ internal fun RunManager.getSelectedAlfrescoJvmConsoleRunnerAndConfigurationSetti
     return if (selectedConfiguration != null && selectedConfiguration.configuration is AlfrescoJvmConsoleRunConfiguration) selectedConfiguration else null
 }
 
+internal fun RunManager.getAlfrescoJvmConsoleRunnerAndConfigurationSettings(): List<RunnerAndConfigurationSettings> =
+    getConfigurationSettingsList(AlfrescoJvmConsoleRunConfigurationType::class.java)
+
 internal fun RunManager.createAlfrescoJvmConsoleRunnerAndConfigurationSettings(): RunnerAndConfigurationSettings {
     val uniqueName = suggestUniqueName(null, AlfrescoJvmConsoleRunConfigurationType)
     return createConfiguration(
