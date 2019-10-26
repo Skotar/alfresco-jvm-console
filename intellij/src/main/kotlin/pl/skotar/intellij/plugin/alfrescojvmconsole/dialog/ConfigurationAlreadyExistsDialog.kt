@@ -43,13 +43,10 @@ class ConfigurationAlreadyExistsDialog(
     }
 
     private fun setUpUseSelectedButton() {
-        configurationsList.addListSelectionListener {
-            useSelectedButton.actionListeners.forEach { useSelectedButton.removeActionListener(it) }
-            useSelectedButton.addActionListener {
-                result = USE_SELECTED
-                selectedConfiguration = configurations[configurationsList.selectedIndex]
-                close(0)
-            }
+        useSelectedButton.addActionListener {
+            result = USE_SELECTED
+            selectedConfiguration = configurations[configurationsList.selectedIndex]
+            close(0)
         }
     }
 
