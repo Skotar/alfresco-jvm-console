@@ -9,6 +9,7 @@ class RequestModel {
 
     static final String PARAMETER_CANONICAL_CLASS_NAME = "canonicalClassName";
     static final String PARAMETER_FUNCTION_NAME = "functionName";
+    static final String PARAMETER_USE_MAIN_CLASS_LOADER = "useMainClassLoader";
 
     static final String MULTIPART_FORM_DATA_MIMETYPE = MULTIPART_FORM_DATA.getMimeType();
 }

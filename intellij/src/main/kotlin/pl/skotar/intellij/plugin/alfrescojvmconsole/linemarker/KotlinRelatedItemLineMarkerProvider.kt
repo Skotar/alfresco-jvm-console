@@ -2,11 +2,14 @@ package pl.skotar.intellij.plugin.alfrescojvmconsole.linemarker
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
+import com.intellij.lang.ASTNode
+import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
+import org.jetbrains.kotlin.psi.psiUtil.children
 import org.jetbrains.kotlin.psi.psiUtil.containingClass
 import org.jetbrains.kotlin.psi.psiUtil.isPublic
 import org.jetbrains.kotlin.psi.psiUtil.parents
@@ -29,7 +32,7 @@ internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, Abstrac
                 ktNamedFunction.isPublic &&
                 hasNoParameters(ktNamedFunction)
             ) {
-                return AlfrescoJvmConsoleLineMarkerInfo(element, createOnClickHandler(project) {
+                return AlfrescoJvmConsoleLineMarkerInfo(element, createOnClickHandler(project, { getMethodComments(ktNamedFunction) }) {
                     ClassDescriptor(getPackageName(ktNamedFunction), getClassName(ktNamedFunction), getFunctionName(ktNamedFunction))
                 })
             }
@@ -63,4 +66,9 @@ internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, Abstrac
 
     private fun getFunctionName(function: KtNamedFunction): String =
         function.name!!
+
+    private fun getMethodComments(function: KtNamedFunction): List<String> =
+        (function.bodyBlockExpression!! as ASTNode).children()
+            .filterIsInstance<PsiComment>().map(PsiElement::getText)
+            .toList()
 }

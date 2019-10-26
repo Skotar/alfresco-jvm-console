@@ -3,6 +3,7 @@ package pl.skotar.alfresco.module.jvmconsole.delivery;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.springframework.extensions.webscripts.AbstractWebScript;
+import org.springframework.extensions.webscripts.WebScriptException;
 import org.springframework.extensions.webscripts.WebScriptRequest;
 import org.springframework.extensions.webscripts.WebScriptResponse;
 import org.springframework.extensions.webscripts.servlet.FormData;
@@ -14,17 +15,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
-import static pl.skotar.alfresco.module.jvmconsole.delivery.RequestModel.PARAMETER_CANONICAL_CLASS_NAME;
-import static pl.skotar.alfresco.module.jvmconsole.delivery.RequestModel.PARAMETER_FUNCTION_NAME;
+import static pl.skotar.alfresco.module.jvmconsole.delivery.RequestModel.*;
 
-public class JvmConsoleExecutePostWebScript extends AbstractWebScript {
+public class ExecutePostWebScript extends AbstractWebScript {
 
     private final Executor executor;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public JvmConsoleExecutePostWebScript(Executor executor) {
+    public ExecutePostWebScript(Executor executor) {
         this.executor = executor;
     }
 
@@ -33,21 +34,34 @@ public class JvmConsoleExecutePostWebScript extends AbstractWebScript {
         RequestValidator.validateContentType(request);
         RequestValidator.validateCanonicalClassNameParameter(request);
         RequestValidator.validateFunctionNameParameter(request);
+        RequestValidator.validateUseMainClassLoaderParameter(request);
 
         String canonicalClassName = request.getParameter(PARAMETER_CANONICAL_CLASS_NAME);
         String functionName = request.getParameter(PARAMETER_FUNCTION_NAME);
+        boolean useMainClassLoader = getParameterUseMainClassLoader(request);
 
         List<FormData.FormField> fields = getFields(request);
         RequestValidator.validateFields(fields);
 
         try {
-            List<String> messages = executor.execute(determineClassByteCodes(fields), canonicalClassName, functionName);
+            List<String> messages = executor.execute(determineClassByteCodes(fields), canonicalClassName, functionName, useMainClassLoader);
 
             setResponseContentHeader(response);
             objectMapper.writeValue(response.getOutputStream(), Response.of(messages));
+        } catch (IllegalArgumentException e) {
+            throw new WebScriptException(HTTP_BAD_REQUEST, e.getMessage());
         } catch (Exception e) {
             setResponseContentHeader(response);
             objectMapper.writeValue(response.getOutputStream(), Response.of(unwrapException(e)));
+        }
+    }
+
+    private boolean getParameterUseMainClassLoader(WebScriptRequest request) {
+        String useMainClassLoader = request.getParameter(PARAMETER_USE_MAIN_CLASS_LOADER);
+        if (useMainClassLoader != null) {
+            return Boolean.parseBoolean(useMainClassLoader);
+        } else {
+            return false;
         }
     }
 

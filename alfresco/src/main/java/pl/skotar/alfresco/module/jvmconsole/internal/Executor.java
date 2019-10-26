@@ -16,12 +16,21 @@ public class Executor {
 
     public List<String> execute(List<ClassByteCode> classByteCodes,
                                 String canonicalClassName,
-                                String functionName) throws ReflectiveOperationException {
-        Class<?> clazz = ReflectionUtils.loadClass(this.getClass().getClassLoader(), classByteCodes, canonicalClassName);
+                                String functionName,
+                                boolean useMainClassLoader) throws ReflectiveOperationException {
+        Class<?> clazz = ReflectionUtils.getClass(determineClassLoader(useMainClassLoader, classByteCodes), canonicalClassName);
         Object instance = ReflectionUtils.createInstanceUsingNoArgumentConstructor(clazz);
         beanInjector.inject(instance);
         Object result = ReflectionUtils.invokeNoArgumentFunction(instance, functionName);
         return processMessages(result);
+    }
+
+    private ClassLoader determineClassLoader(boolean useMainClassLoader, List<ClassByteCode> classByteCodes) throws ReflectiveOperationException {
+        if (useMainClassLoader) {
+            return ReflectionUtils.addClassesToCurrentClassLoader(Thread.currentThread().getContextClassLoader(), classByteCodes);
+        } else {
+            return ReflectionUtils.createClassLoader(this.getClass().getClassLoader(), classByteCodes);
+        }
     }
 
     @SuppressWarnings("unchecked")

@@ -13,16 +13,39 @@ class ReflectionUtils {
     private ReflectionUtils() {
     }
 
-    static Class<?> loadClass(ClassLoader parent, List<ClassByteCode> classByteCodes, String canonicalClassName) throws ClassNotFoundException {
-        return new ClassByteCodeClassLoader(parent, classByteCodes)
-                .loadClass(canonicalClassName);
+    static ClassByteCodeClassLoader createClassLoader(ClassLoader parent, List<ClassByteCode> classByteCodes) {
+        return new ClassByteCodeClassLoader(parent, classByteCodes);
+    }
+
+    static ClassLoader addClassesToCurrentClassLoader(ClassLoader parent, List<ClassByteCode> classByteCodes) throws ReflectiveOperationException {
+        Method defineClassMethod = ClassLoader.class.getDeclaredMethod("defineClass", String.class, byte[].class, int.class, int.class);
+        try {
+            defineClassMethod.setAccessible(true);
+            for (ClassByteCode classByteCode : classByteCodes) {
+                defineClassMethod.invoke(parent, classByteCode.canonicalClassName, classByteCode.byteCode, 0, classByteCode.byteCode.length);
+            }
+        } catch (InvocationTargetException e) {
+            if (e.getCause() instanceof LinkageError) {
+                throw new IllegalArgumentException("Class is already loaded in class loader. Change name");
+            } else {
+                throw e;
+            }
+        } finally {
+            defineClassMethod.setAccessible(false);
+        }
+
+        return parent;
+    }
+
+    static Class<?> getClass(ClassLoader classLoader, String canonicalClassName) throws ClassNotFoundException {
+        return classLoader.loadClass(canonicalClassName);
     }
 
     static Object createInstanceUsingNoArgumentConstructor(Class<?> clazz) throws ReflectiveOperationException {
         return Arrays.stream(clazz.getConstructors())
                      .filter(constructor -> constructor.getParameterCount() == 0)
                      .findFirst()
-                     .orElseThrow(() -> new IllegalStateException("Class <" + clazz.getCanonicalName() + "> doesn't contain no-argument constructor"))
+                     .orElseThrow(() -> new IllegalArgumentException("Class <" + clazz.getCanonicalName() + "> doesn't contain no-argument constructor"))
                      .newInstance();
     }
 
@@ -40,7 +63,7 @@ class ReflectionUtils {
             return Arrays.stream(clazz.getMethods())
                          .filter(method -> validateMethod(method, name))
                          .findFirst()
-                         .orElseThrow(() -> new IllegalStateException("Class <" + clazz.getCanonicalName() + "> doesn't contain no-argument <" + name + "> function"))
+                         .orElseThrow(() -> new IllegalArgumentException("Class <" + clazz.getCanonicalName() + "> doesn't contain no-argument <" + name + "> function"))
                          .invoke(instance);
         } finally {
             System.setSecurityManager(defaultSecurityManager);

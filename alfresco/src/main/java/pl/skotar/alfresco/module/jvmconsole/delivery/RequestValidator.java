@@ -14,6 +14,13 @@ class RequestValidator {
     private RequestValidator() {
     }
 
+    static void validateContentType(WebScriptRequest request) {
+        String contentType = request.getContentType();
+        if (!contentType.equals(MULTIPART_FORM_DATA_MIMETYPE)) {
+            throw new WebScriptException(HTTP_BAD_REQUEST, "Content-Type is <" + contentType + "> but should be <" + MULTIPART_FORM_DATA_MIMETYPE + ">");
+        }
+    }
+
     static void validateCanonicalClassNameParameter(WebScriptRequest request) {
         if (request.getParameter(PARAMETER_CANONICAL_CLASS_NAME) == null) {
             throw new WebScriptException(HTTP_BAD_REQUEST, "There is no <" + PARAMETER_CANONICAL_CLASS_NAME + "> parameter");
@@ -26,11 +33,15 @@ class RequestValidator {
         }
     }
 
-    static void validateContentType(WebScriptRequest request) {
-        String contentType = request.getContentType();
-        if (!contentType.equals(MULTIPART_FORM_DATA_MIMETYPE)) {
-            throw new WebScriptException(HTTP_BAD_REQUEST, "Content-Type is <" + contentType + "> but should be <" + MULTIPART_FORM_DATA_MIMETYPE + ">");
+    static void validateUseMainClassLoaderParameter(WebScriptRequest request) {
+        String useMainClassLoader = request.getParameter(PARAMETER_USE_MAIN_CLASS_LOADER);
+        if (useMainClassLoader != null && isNotBoolean(useMainClassLoader)) {
+            throw new WebScriptException(HTTP_BAD_REQUEST, "Parameter <" + PARAMETER_USE_MAIN_CLASS_LOADER + "> must be <true> or <false>");
         }
+    }
+
+    private static boolean isNotBoolean(String useMainClassLoader) {
+        return !(useMainClassLoader.equals("false") || useMainClassLoader.equals("true"));
     }
 
     static void validateFields(List<FormData.FormField> fields) {

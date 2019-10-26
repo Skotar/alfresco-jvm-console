@@ -30,49 +30,44 @@ class ExecutorJavaTest {
     @Test
     fun execute() {
         Executor(mockk(relaxed = true))
-            .execute(testClassByteCodes, className, "execute")
+            .execute(testClassByteCodes, className, "execute", true)
     }
 
     @Test
     fun executeAndReturnStringList() {
         Executor(mockk(relaxed = true))
-            .execute(testClassByteCodes, className, "executeAndReturnStringList") shouldBe
-                listOf("test")
+            .execute(testClassByteCodes, className, "executeAndReturnStringList", true) shouldBe listOf("test")
     }
 
     @Test
     fun executeAndReturnIntegerList() {
         Executor(mockk(relaxed = true))
-            .execute(testClassByteCodes, className, "executeAndReturnIntegerList") shouldBe
-                listOf("-1")
+            .execute(testClassByteCodes, className, "executeAndReturnIntegerList", true) shouldBe listOf("-1")
     }
 
     @Test
     fun executeAndReturnString() {
         Executor(mockk(relaxed = true))
-            .execute(testClassByteCodes, className, "executeAndReturnString") shouldBe
-                listOf("test")
+            .execute(testClassByteCodes, className, "executeAndReturnString", true) shouldBe listOf("test")
     }
 
     @Test
     fun executeNestedAndReturnString() {
         Executor(mockk(relaxed = true))
-            .execute(testClassByteCodes, className, "executeNestedAndReturnString") shouldBe
-                listOf("test")
+            .execute(testClassByteCodes, className, "executeNestedAndReturnString", true) shouldBe listOf("test")
     }
 
     @Test
     fun executeLambdaAndReturnString() {
         Executor(mockk(relaxed = true))
-            .execute(testClassByteCodes, className, "executeLambdaAndReturnString") shouldBe
-                listOf("test")
+            .execute(testClassByteCodes, className, "executeLambdaAndReturnString", true) shouldBe listOf("test")
     }
 
     @Test
     fun `executeWithParameter _ should throw IllegalStateException because function contains parameters`() {
         shouldThrow<IllegalStateException> {
             Executor(mockk(relaxed = true))
-                .execute(testClassByteCodes, className, "executeWithParameter")
+                .execute(testClassByteCodes, className, "executeWithParameter", true)
         }.message shouldBe "Class <${testClassByteCodes.first().canonicalClassName}> doesn't contain no-argument <executeWithParameter> function"
     }
 
@@ -80,7 +75,7 @@ class ExecutorJavaTest {
     fun `executeAndThrowException _ should throw InvocationTargetException that contains IllegalStateException`() {
         shouldThrow<InvocationTargetException> {
             Executor(mockk(relaxed = true))
-                .execute(testClassByteCodes, className, "executeAndThrowException")
+                .execute(testClassByteCodes, className, "executeAndThrowException", true)
         }.let {
             it.targetException shouldBe instanceOf(IllegalStateException::class)
             it.targetException.message shouldBe "I'm in incorrect state"
@@ -91,7 +86,7 @@ class ExecutorJavaTest {
     fun `noMatter _ should throw IllegalStateException because it contains constructor with parameters`() {
         shouldThrow<IllegalStateException> {
             Executor(mockk(relaxed = true))
-                .execute(constructorWithParametersTestClassByteCodes, classWithParametersTestName, "noMatter")
+                .execute(constructorWithParametersTestClassByteCodes, classWithParametersTestName, "noMatter", true)
         }.message shouldBe "Class <${constructorWithParametersTestClassByteCodes.first().canonicalClassName}> doesn't contain no-argument constructor"
     }
 }

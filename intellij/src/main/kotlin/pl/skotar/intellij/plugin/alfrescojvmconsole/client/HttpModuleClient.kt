@@ -15,9 +15,15 @@ import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.HttpConfigu
 import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ClientException
 import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ClientExecutionException
 import java.net.HttpURLConnection.*
+import java.net.URLEncoder
 import java.util.*
+import kotlin.text.Charsets.UTF_8
 
 internal class HttpModuleClient {
+
+    private class ErrorResponse(
+        val message: String
+    )
 
     companion object {
         private const val EXECUTE_WEBSCRIPT_PATH = "/service/jvm-console/execute"
@@ -34,12 +40,13 @@ internal class HttpModuleClient {
     fun execute(
         classDescriptor: ClassDescriptor,
         httpConfigurationParameters: HttpConfigurationParameters,
-        classByteCodes: List<ClassByteCode>
+        classByteCodes: List<ClassByteCode>,
+        useMainClassLoader: Boolean
     ): List<String> =
         httpClientBuilder.execute(
             HttpPost(
                 httpConfigurationParameters.getAddress() + EXECUTE_WEBSCRIPT_PATH +
-                        createUrlParameters(classDescriptor.canonicalClassName, classDescriptor.functionName)
+                        createUrlParameters(classDescriptor.canonicalClassName, classDescriptor.functionName, useMainClassLoader)
             )
                 .setAuthorization(httpConfigurationParameters.username, httpConfigurationParameters.password)
                 .setMultiPartEntity(classByteCodes)
@@ -63,12 +70,16 @@ internal class HttpModuleClient {
             HTTP_UNAUTHORIZED -> throw ClientException("Bad credentials. Check if the given user has administrator permissions")
             HTTP_NOT_FOUND -> throw ClientException("Alfresco Content Services or alfresco-jvm-console AMP not found. Check if the given parameters point to the running server and alfresco-jvm-console AMP is installed")
             HTTP_INTERNAL_ERROR -> throw ClientException("An error occurred on Alfresco Content Services. Check logs for more details")
+            HTTP_BAD_REQUEST -> throw ClientException(extractMessage(entityString))
             else -> throw ClientException(entityString)
         }
     }
 
-    private fun createUrlParameters(canonicalClassName: String, functionName: String): String =
-        "?$PARAMETER_CANONICAL_CLASS_NAME=$canonicalClassName&$PARAMETER_FUNCTION_NAME=$functionName"
+    private fun createUrlParameters(canonicalClassName: String, functionName: String, useMainClassLoader: Boolean): String =
+        "?$PARAMETER_CANONICAL_CLASS_NAME=${canonicalClassName.encode()}&$PARAMETER_FUNCTION_NAME=${functionName.encode()}&useMainClassLoader=$useMainClassLoader"
+
+    private fun String.encode(): String =
+        URLEncoder.encode(this, UTF_8.name())
 
     private fun HttpPost.setAuthorization(username: String, password: String): HttpPost =
         this.apply {
@@ -85,6 +96,10 @@ internal class HttpModuleClient {
                 }
             }.build()
         }
+
+    private fun extractMessage(entityString: String): String =
+        gson.fromJson(entityString, ErrorResponse::class.java)
+            .message
 
     private fun processResponse(response: Response): List<String> =
         if (response.successfully) {

@@ -5,7 +5,7 @@
           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
 
     <bean id="webscript.pl.skotar.alfresco.module.jvmconsole.delivery.jvm-console-execute.post"
-          class="pl.skotar.alfresco.module.jvmconsole.delivery.JvmConsoleExecutePostWebScript"
+          class="pl.skotar.alfresco.module.jvmconsole.delivery.ExecutePostWebScript"
           parent="webscript"
           autowire="constructor"
     />

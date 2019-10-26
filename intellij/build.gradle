@@ -37,6 +37,10 @@ intellij {
     updateSinceUntilBuild false
 }
 
+runIde {
+    jvmArgs '-Xmx2g'
+}
+
 patchPluginXml {
 
 }

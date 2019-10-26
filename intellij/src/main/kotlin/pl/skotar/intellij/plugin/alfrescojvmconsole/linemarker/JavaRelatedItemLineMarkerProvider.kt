@@ -2,10 +2,7 @@ package pl.skotar.intellij.plugin.alfrescojvmconsole.linemarker
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
-import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiIdentifier
-import com.intellij.psi.PsiMethod
+import com.intellij.psi.*
 import com.intellij.psi.impl.source.PsiJavaFileImpl
 import org.jetbrains.kotlin.psi.psiUtil.parents
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassDescriptor
@@ -28,7 +25,7 @@ internal class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractR
                 isPublicNotStatic(psiMethod) &&
                 hasNoParameters(psiMethod)
             ) {
-                return AlfrescoJvmConsoleLineMarkerInfo(element, createOnClickHandler(project) {
+                return AlfrescoJvmConsoleLineMarkerInfo(element, createOnClickHandler(project, { getMethodComments(psiMethod) }) {
                     ClassDescriptor(getPackageName(psiMethod), getClassName(psiMethod), getFunctionName(psiMethod))
                 })
             }
@@ -66,4 +63,9 @@ internal class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractR
 
     private fun getFunctionName(method: PsiMethod): String =
         method.name
+
+    private fun getMethodComments(method: PsiMethod): List<String> =
+        method
+            .children.filterIsInstance<PsiCodeBlock>().first()
+            .children.filterIsInstance<PsiComment>().map(PsiElement::getText)
 }

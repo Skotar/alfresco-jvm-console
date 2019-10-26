@@ -28,6 +28,7 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
 
     protected fun createOnClickHandler(
         project: Project,
+        getComments: () -> List<String>,
         getClassDescriptor: () -> ClassDescriptor
     ): () -> Unit =
         {
@@ -43,11 +44,12 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
                 val classDescriptor = getClassDescriptor()
                 val httpConfigurationParameters =
                     createHttpConfigurationParameters(runnerAndConfigurationSettings.configuration as AlfrescoJvmConsoleRunConfiguration)
+                val useMainClassLoader = determineUseMainClassLoader(getComments())
 
                 CompilerManager.getInstance(project).make(project, project.allModules().toTypedArray()) { aborted, errors, _, _ ->
                     if (successfulCompilation(aborted, errors)) {
                         project.getActiveModule().getCompilerOutputFolder().refresh(true, true) {
-                            executeOnAlfresco(project, classDescriptor, httpConfigurationParameters)
+                            executeOnAlfresco(project, classDescriptor, httpConfigurationParameters, useMainClassLoader)
                         }
                     }
                 }
@@ -65,10 +67,18 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
             runConfiguration.password
         )
 
+    private fun determineUseMainClassLoader(comments: List<String>): Boolean =
+        comments.any { it.contains("useMainClassLoader") }
+
     private fun successfulCompilation(aborted: Boolean, errors: Int): Boolean =
         !aborted && errors == 0
 
-    private fun executeOnAlfresco(project: Project, classDescriptor: ClassDescriptor, httpConfigurationParameters: HttpConfigurationParameters) {
+    private fun executeOnAlfresco(
+        project: Project,
+        classDescriptor: ClassDescriptor,
+        httpConfigurationParameters: HttpConfigurationParameters,
+        useMainClassLoader: Boolean
+    ) {
         val startTimestamp = currentTimeMillis()
 
         val runToolWindowTab = RunToolWindowTab(project)
@@ -80,7 +90,7 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
 
             executor.submit {
                 try {
-                    val messages = moduleClient.execute(classDescriptor, httpConfigurationParameters, classCodeBytes)
+                    val messages = moduleClient.execute(classDescriptor, httpConfigurationParameters, classCodeBytes, useMainClassLoader)
                     handleSuccessfulExecution(runToolWindowTab, messages, startTimestamp)
                 } catch (e: Exception) {
                     handleFailureExecution(runToolWindowTab, e, startTimestamp)
