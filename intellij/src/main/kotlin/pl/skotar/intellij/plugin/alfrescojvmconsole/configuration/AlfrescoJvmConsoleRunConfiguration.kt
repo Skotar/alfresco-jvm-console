@@ -55,7 +55,7 @@ class AlfrescoJvmConsoleRunConfiguration(
             throw RuntimeConfigurationError("Username must be set")
         }
 
-        if (!Password.validate(username)) {
+        if (!Password.validate(password)) {
             throw RuntimeConfigurationError("Password must be set")
         }
     }

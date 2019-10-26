@@ -42,21 +42,21 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
 
             try {
                 runnerAndConfigurationSettings.checkSettings()
-            } catch (e: RuntimeConfigurationException) {
-                RunDialog.editConfiguration(project, runnerAndConfigurationSettings, "Edit configuration")
-            }
 
-            val classDescriptor = getClassDescriptor()
-            val httpConfigurationParameters =
-                createHttpConfigurationParameters(runnerAndConfigurationSettings.configuration as AlfrescoJvmConsoleRunConfiguration)
-            val useMainClassLoader = determineUseMainClassLoader(getComments())
+                val classDescriptor = getClassDescriptor()
+                val httpConfigurationParameters =
+                    createHttpConfigurationParameters(runnerAndConfigurationSettings.configuration as AlfrescoJvmConsoleRunConfiguration)
+                val useMainClassLoader = determineUseMainClassLoader(getComments())
 
-            CompilerManager.getInstance(project).make(project, project.allModules().toTypedArray()) { aborted, errors, _, _ ->
-                if (successfulCompilation(aborted, errors)) {
-                    project.getActiveModule().getCompilerOutputFolder().refresh(true, true) {
-                        executeOnAlfresco(project, classDescriptor, httpConfigurationParameters, useMainClassLoader)
+                CompilerManager.getInstance(project).make(project, project.allModules().toTypedArray()) { aborted, errors, _, _ ->
+                    if (successfulCompilation(aborted, errors)) {
+                        project.getActiveModule().getCompilerOutputFolder().refresh(true, true) {
+                            executeOnAlfresco(project, classDescriptor, httpConfigurationParameters, useMainClassLoader)
+                        }
                     }
                 }
+            } catch (e: RuntimeConfigurationException) {
+                RunDialog.editConfiguration(project, runnerAndConfigurationSettings, "Edit configuration")
             }
         }
 
