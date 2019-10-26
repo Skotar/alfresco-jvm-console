@@ -1,5 +1,8 @@
 package pl.skotar.intellij.plugin.alfrescojvmconsole.configuration
 
+import com.intellij.credentialStore.CredentialAttributes
+import com.intellij.credentialStore.Credentials
+import com.intellij.credentialStore.generateServiceName
 import com.intellij.execution.ExecutionTarget
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.RunConfiguration
@@ -7,6 +10,7 @@ import com.intellij.execution.configurations.RunConfigurationBase
 import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.configurations.RuntimeConfigurationError
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.util.xmlb.XmlSerializer
@@ -64,12 +68,32 @@ class AlfrescoJvmConsoleRunConfiguration(
         "[$start, $last]"
 
     override fun readExternal(element: Element) {
-        super.readExternal(element)
-        XmlSerializer.deserializeInto(this, element)
+        Persistence()
+            .also { XmlSerializer.deserializeInto(it, element) }
+            .let {
+                host = it.host!!
+                path = it.path!!
+                port == it.port!!
+            }
+
+        PasswordSafe.instance.get(createCredentialAttributes())?.let { credentials ->
+            credentials.userName?.let { username = it }
+            credentials.getPasswordAsString()?.let { password = it }
+        }
     }
 
     override fun writeExternal(element: Element) {
-        super.writeExternal(element)
-        XmlSerializer.serializeInto(this, element)
+        XmlSerializer.serializeInto(Persistence(host, path, port), element)
+        PasswordSafe.instance.set(createCredentialAttributes(), Credentials(username, password))
     }
+
+    private fun createCredentialAttributes(): CredentialAttributes {
+        return CredentialAttributes(generateServiceName("AlfrescoJvmConsoleRunConfiguration", name));
+    }
+
+    private data class Persistence(
+        var host: String? = null,
+        var path: String? = null,
+        var port: Int? = null
+    )
 }
