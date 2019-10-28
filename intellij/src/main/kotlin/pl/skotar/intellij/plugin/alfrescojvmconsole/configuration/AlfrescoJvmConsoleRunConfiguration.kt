@@ -87,9 +87,8 @@ class AlfrescoJvmConsoleRunConfiguration(
         PasswordSafe.instance.set(createCredentialAttributes(), Credentials(username, password))
     }
 
-    private fun createCredentialAttributes(): CredentialAttributes {
-        return CredentialAttributes(generateServiceName("AlfrescoJvmConsoleRunConfiguration", name));
-    }
+    private fun createCredentialAttributes(): CredentialAttributes =
+        CredentialAttributes(generateServiceName("AlfrescoJvmConsoleRunConfiguration", name));
 
     private data class Persistence(
         var host: String? = null,
