@@ -1,5 +1,6 @@
 package pl.skotar.alfresco.module.jvmconsole.delivery;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.extensions.webscripts.WebScriptException;
 import org.springframework.extensions.webscripts.WebScriptRequest;
 import org.springframework.extensions.webscripts.servlet.FormData;
@@ -46,7 +47,7 @@ class RequestValidator {
 
     static void validateFields(List<FormData.FormField> fields) {
         for (FormData.FormField field : fields) {
-            if (field.getName().isBlank()) {
+            if (StringUtils.isBlank(field.getName())) {
                 throw new WebScriptException(HTTP_BAD_REQUEST, "One of the fields has blank name but should contain canonical class name");
             }
         }

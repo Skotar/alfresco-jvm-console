@@ -2,6 +2,7 @@ package pl.skotar.alfresco.module.jvmconsole.delivery;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -64,9 +65,11 @@ class Response {
     }
 
     private static List<String> removeReflectionDetails(String[] stackTrace) {
-        return Stream.of(stackTrace)
-                     .takeWhile(it -> !it.contains("jdk.internal.reflect.NativeMethodAccessorImpl.invoke0"))
-                     .collect(Collectors.toList());
+        List<String> limitedStackTrace = new ArrayList<>();
+        for (int i = 0; i < stackTrace.length && !stackTrace[i].contains("jdk.internal.reflect.NativeMethodAccessorImpl.invoke0"); i++) {
+            limitedStackTrace.add(stackTrace[i]);
+        }
+        return limitedStackTrace;
     }
 
     public Boolean getSuccessfully() {

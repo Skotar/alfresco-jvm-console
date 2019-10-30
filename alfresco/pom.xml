@@ -11,7 +11,8 @@
     <name>[MM] Alfresco JVM Console</name>
 
     <properties>
-        <java.version>11</java.version>
+        <java.version>1.8</java.version>
+        <java-release.version>8</java-release.version>
 
         <kotlin-logging.version>1.7.3</kotlin-logging.version>
 
@@ -522,7 +523,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <release>11</release>
+                    <release>${java-release.version}</release>
                 </configuration>
                 <executions>
                     <!-- Replacing default-compile as it is treated specially by maven -->
