@@ -32,8 +32,9 @@ internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, Abstrac
                 ktNamedFunction.isPublic &&
                 hasNoParameters(ktNamedFunction)
             ) {
+                val packageName = element.containingKtFile.packageFqName.asString()
                 return AlfrescoJvmConsoleLineMarkerInfo(element, createOnClickHandler(project, { getMethodComments(ktNamedFunction) }) {
-                    ClassDescriptor(getPackageName(ktNamedFunction), getClassName(ktNamedFunction), getFunctionName(ktNamedFunction))
+                    ClassDescriptor(getPackageName(ktNamedFunction, packageName), getClassName(ktNamedFunction), getFunctionName(ktNamedFunction))
                 })
             }
         }
@@ -58,8 +59,12 @@ internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, Abstrac
     private fun hasNoParameters(function: KtNamedFunction): Boolean =
         function.valueParameterList?.parameters?.size == 0
 
-    private fun getPackageName(function: KtNamedFunction): String =
-        (function.containingFile as KtFile).packageFqName.asString()
+    private fun getPackageName(function: KtNamedFunction, fallbackPackageName: String): String =
+        try {
+            (function.containingFile as KtFile).packageFqName.asString()
+        } catch (e: Exception) {
+            fallbackPackageName
+        }
 
     private fun getClassName(function: KtNamedFunction): String =
         function.containingClass()!!.name!!
