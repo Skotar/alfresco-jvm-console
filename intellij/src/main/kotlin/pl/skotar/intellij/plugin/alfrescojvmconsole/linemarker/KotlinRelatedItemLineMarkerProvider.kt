@@ -33,8 +33,13 @@ internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, Abstrac
                 hasNoParameters(ktNamedFunction)
             ) {
                 val packageName = element.containingKtFile.packageFqName.asString()
+                val className = element.containingClass()?.name
                 return AlfrescoJvmConsoleLineMarkerInfo(element, createOnClickHandler(project, { getMethodComments(ktNamedFunction) }) {
-                    ClassDescriptor(getPackageName(ktNamedFunction, packageName), getClassName(ktNamedFunction), getFunctionName(ktNamedFunction))
+                    ClassDescriptor(
+                        getPackageName(ktNamedFunction, packageName),
+                        getClassName(ktNamedFunction, className),
+                        getFunctionName(ktNamedFunction)
+                    )
                 })
             }
         }
@@ -66,8 +71,12 @@ internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, Abstrac
             fallbackPackageName
         }
 
-    private fun getClassName(function: KtNamedFunction): String =
-        function.containingClass()!!.name!!
+    private fun getClassName(function: KtNamedFunction, fallbackClassName: String?): String =
+        try {
+            function.containingClass()!!.name!!
+        } catch (e: Exception) {
+            fallbackClassName ?: throw IllegalStateException("Couldn't get class name")
+        }
 
     private fun getFunctionName(function: KtNamedFunction): String =
         function.name!!
