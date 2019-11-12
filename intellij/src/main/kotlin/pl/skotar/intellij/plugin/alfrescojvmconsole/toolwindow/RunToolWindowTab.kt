@@ -15,7 +15,9 @@ import org.jetbrains.kotlin.idea.run.LocalFileHyperlinkInfo
 import java.io.File
 import javax.swing.Icon
 
-internal class RunToolWindowTab(private val project: Project) {
+internal class RunToolWindowTab(
+    private val project: Project
+) {
 
     private lateinit var toolWindow: ToolWindow
     private lateinit var content: Content

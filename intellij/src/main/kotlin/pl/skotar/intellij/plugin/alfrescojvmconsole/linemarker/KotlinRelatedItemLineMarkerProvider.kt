@@ -29,7 +29,7 @@ internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, Abstrac
                 project.isFileInAnyModule(project.getActiveFile()) &&
                 startsWithAlfresco(ktNamedFunction) &&
                 isInClass(ktNamedFunction) &&
-                ktNamedFunction.isPublic &&
+                isPublic(ktNamedFunction) &&
                 hasNoParameters(ktNamedFunction)
             ) {
                 val packageName = element.containingKtFile.packageFqName.asString()
@@ -60,6 +60,9 @@ internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, Abstrac
     private fun isInClass(function: KtNamedFunction): Boolean =
         function.parents.filterIsInstance<KtClass>().count() == 1 &&
                 function.parents.filterIsInstance<KtObjectDeclaration>().count() == 0
+
+    private fun isPublic(ktNamedFunction: KtNamedFunction): Boolean =
+        ktNamedFunction.isPublic
 
     private fun hasNoParameters(function: KtNamedFunction): Boolean =
         function.valueParameterList?.parameters?.size == 0

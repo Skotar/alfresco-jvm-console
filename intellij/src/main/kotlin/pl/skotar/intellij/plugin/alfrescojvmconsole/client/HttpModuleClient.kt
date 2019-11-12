@@ -1,27 +1,21 @@
 package pl.skotar.intellij.plugin.alfrescojvmconsole.client
 
+import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.BlobDataPart
+import com.github.kittinunf.fuel.core.FuelError
+import com.github.kittinunf.fuel.core.extensions.authentication
+import com.github.kittinunf.fuel.coroutines.awaitObject
+import com.github.kittinunf.fuel.gson.gsonDeserializer
 import com.google.gson.Gson
-import org.apache.http.HttpHeaders.AUTHORIZATION
-import org.apache.http.client.methods.CloseableHttpResponse
-import org.apache.http.client.methods.HttpPost
-import org.apache.http.entity.ContentType
-import org.apache.http.entity.mime.HttpMultipartMode
-import org.apache.http.entity.mime.MultipartEntityBuilder
-import org.apache.http.impl.client.HttpClientBuilder
-import org.apache.http.util.EntityUtils
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassByteCode
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassDescriptor
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.HttpConfigurationParameters
-import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ClientException
-import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ClientExecutionException
-import java.net.HttpURLConnection.*
-import java.net.URLEncoder
-import java.util.*
-import kotlin.text.Charsets.UTF_8
+import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ExecutionException
+import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.HttpException
 
 internal class HttpModuleClient {
 
-    private class ErrorResponse(
+    data class ErrorResponse(
         val message: String
     )
 
@@ -29,82 +23,58 @@ internal class HttpModuleClient {
         private const val EXECUTE_WEBSCRIPT_PATH = "/service/jvm-console/execute"
         private const val PARAMETER_CANONICAL_CLASS_NAME = "canonicalClassName"
         private const val PARAMETER_FUNCTION_NAME = "functionName"
+        private const val PARAMETER_USE_MAIN_CLASS_LOADER = "useMainClassLoader"
 
-        private val applicationJavaVmMimetypeContentType = ContentType.create("application/java-vm")
-
-        private val httpClientBuilder by lazy { HttpClientBuilder.create().build() }
-
-        private val gson = Gson()
+        private const val APPLICATION_JAVA_VM_MIMETYPE = "application/java-vm"
     }
 
-    fun execute(
+    suspend fun execute(
         classDescriptor: ClassDescriptor,
         httpConfigurationParameters: HttpConfigurationParameters,
         classByteCodes: List<ClassByteCode>,
         useMainClassLoader: Boolean
     ): List<String> =
-        httpClientBuilder.execute(
-            HttpPost(
-                httpConfigurationParameters.getAddress() + EXECUTE_WEBSCRIPT_PATH +
-                        createUrlParameters(classDescriptor.canonicalClassName, classDescriptor.functionName, useMainClassLoader)
+        try {
+            Fuel.upload(
+                httpConfigurationParameters.getAddress() + EXECUTE_WEBSCRIPT_PATH,
+                parameters = createUrlParameters(classDescriptor.canonicalClassName, classDescriptor.functionName, useMainClassLoader)
             )
-                .setAuthorization(httpConfigurationParameters.username, httpConfigurationParameters.password)
-                .setMultiPartEntity(classByteCodes)
-        ).use { response ->
-            val entityString = response.getEntityString()
-
-            validate(response.statusLine.statusCode, entityString)
-
-            return processResponse(gson.fromJson(entityString, Response::class.java))
+                .add(*determineBlobDataParts(classByteCodes))
+                .authentication().basic(httpConfigurationParameters.username, httpConfigurationParameters.password)
+                .timeout(Int.MAX_VALUE)
+                .timeoutRead(Int.MAX_VALUE)
+                .awaitObject(gsonDeserializer<Response>())
+                .let(::processResponse)
+        } catch (e: FuelError) {
+            throw HttpException(e.response.statusCode, extractMessage(e.errorData), e)
         }
 
-    private fun CloseableHttpResponse.getEntityString(): String =
-        EntityUtils.toString(entity)
+    private fun createUrlParameters(canonicalClassName: String, functionName: String, useMainClassLoader: Boolean): List<Pair<String, Any>> =
+        listOf(
+            PARAMETER_CANONICAL_CLASS_NAME to canonicalClassName,
+            PARAMETER_FUNCTION_NAME to functionName,
+            PARAMETER_USE_MAIN_CLASS_LOADER to useMainClassLoader
+        )
 
-    private fun validate(statusCode: Int, entityString: String) {
-        if (statusCode == HTTP_OK) {
-            return
-        }
-
-        when (statusCode) {
-            HTTP_UNAUTHORIZED -> throw ClientException("Bad credentials. Check if the given user has administrator permissions")
-            HTTP_NOT_FOUND -> throw ClientException("Alfresco Content Services or alfresco-jvm-console AMP not found. Check if the given parameters point to the running server and alfresco-jvm-console AMP is installed")
-            HTTP_INTERNAL_ERROR -> throw ClientException("An error occurred on Alfresco Content Services. Check logs for more details")
-            HTTP_BAD_REQUEST -> throw ClientException(extractMessage(entityString))
-            else -> throw ClientException(entityString)
-        }
-    }
-
-    private fun createUrlParameters(canonicalClassName: String, functionName: String, useMainClassLoader: Boolean): String =
-        "?$PARAMETER_CANONICAL_CLASS_NAME=${canonicalClassName.encode()}&$PARAMETER_FUNCTION_NAME=${functionName.encode()}&useMainClassLoader=$useMainClassLoader"
-
-    private fun String.encode(): String =
-        URLEncoder.encode(this, UTF_8.name())
-
-    private fun HttpPost.setAuthorization(username: String, password: String): HttpPost =
-        this.apply {
-            val encoding = Base64.getEncoder().encodeToString("$username:$password".toByteArray())
-            setHeader(AUTHORIZATION, "Basic $encoding")
-        }
-
-    private fun HttpPost.setMultiPartEntity(classByteCodes: List<ClassByteCode>): HttpPost =
-        this.apply {
-            entity = MultipartEntityBuilder.create().apply {
-                setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
-                classByteCodes.forEach { (canonicalClassName, byteCode) ->
-                    addBinaryBody(canonicalClassName, byteCode, applicationJavaVmMimetypeContentType, null)
-                }
-            }.build()
-        }
-
-    private fun extractMessage(entityString: String): String =
-        gson.fromJson(entityString, ErrorResponse::class.java)
-            .message
+    private fun determineBlobDataParts(classByteCodes: List<ClassByteCode>): Array<BlobDataPart> =
+        classByteCodes.map { (canonicalClassName, byteCode) ->
+            BlobDataPart(byteCode.inputStream(), name = canonicalClassName, contentType = APPLICATION_JAVA_VM_MIMETYPE)
+        }.toTypedArray()
 
     private fun processResponse(response: Response): List<String> =
         if (response.successfully) {
             response.messages!!
         } else {
-            throw ClientExecutionException(response.exception!!.stackTrace.joinToString("\n"))
+            throw ExecutionException(response.exception!!.stackTrace.joinToString("\n"))
         }
+
+    private fun extractMessage(data: ByteArray): String {
+        val stringData = String(data)
+        return try {
+            Gson().fromJson(stringData, ErrorResponse::class.java)
+                .message
+        } catch (e: Exception) {
+            stringData
+        }
+    }
 }

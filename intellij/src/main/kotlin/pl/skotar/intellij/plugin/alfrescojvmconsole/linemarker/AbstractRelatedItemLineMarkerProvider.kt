@@ -3,17 +3,20 @@ package pl.skotar.intellij.plugin.alfrescojvmconsole.linemarker
 import com.intellij.execution.RunManager
 import com.intellij.execution.RunnerAndConfigurationSettings
 import com.intellij.execution.configurations.RuntimeConfigurationException
-import com.intellij.execution.impl.RunDialog
 import com.intellij.openapi.compiler.CompilerManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.jetbrains.kotlin.idea.util.projectStructure.allModules
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassByteCode
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassDescriptor
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.HttpConfigurationParameters
 import pl.skotar.intellij.plugin.alfrescojvmconsole.client.HttpModuleClient
-import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ClientException
-import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ClientExecutionException
+import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.ExecutionException
+import pl.skotar.intellij.plugin.alfrescojvmconsole.client.exception.HttpException
 import pl.skotar.intellij.plugin.alfrescojvmconsole.configuration.AlfrescoJvmConsoleRunConfiguration
 import pl.skotar.intellij.plugin.alfrescojvmconsole.dialog.ConfigurationAlreadyExistsDialog
 import pl.skotar.intellij.plugin.alfrescojvmconsole.dialog.ConfigurationAlreadyExistsDialog.Result.CREATE_NEW
@@ -22,13 +25,17 @@ import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.*
 import pl.skotar.intellij.plugin.alfrescojvmconsole.toolwindow.*
 import pl.skotar.intellij.plugin.alfrescojvmconsole.util.invokeLater
 import java.lang.System.currentTimeMillis
-import java.util.concurrent.Executors
+import java.net.ConnectException
+import java.net.HttpURLConnection.*
+import java.net.UnknownHostException
 
 internal abstract class AbstractRelatedItemLineMarkerProvider {
 
     companion object {
         private val moduleClient = HttpModuleClient()
     }
+
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     protected fun createOnClickHandler(
         project: Project,
@@ -56,7 +63,7 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
                     }
                 }
             } catch (e: RuntimeConfigurationException) {
-                RunDialog.editConfiguration(project, runnerAndConfigurationSettings, "Edit configuration")
+                project.editConfiguration(runnerAndConfigurationSettings)
             }
         }
 
@@ -68,10 +75,12 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
 
             when (dialog.result) {
                 CREATE_NEW -> runManager.createAlfrescoJvmConsoleRunnerAndConfigurationSettings()
+                    .also { project.editConfiguration(it) }
                 USE_SELECTED -> dialog.selectedConfiguration
             }
         } else {
             runManager.createAlfrescoJvmConsoleRunnerAndConfigurationSettings()
+                .also { project.editConfiguration(it) }
         }.also { runManager.selectedConfiguration = it }
     }
 
@@ -101,22 +110,21 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
         val runToolWindowTab = RunToolWindowTab(project)
             .also { it.logStart(createTabName(classDescriptor.className, classDescriptor.functionName), httpConfigurationParameters.getAddress()) }
 
-        val executor = Executors.newSingleThreadExecutor()
         try {
             val classCodeBytes = determineClassCodeBytes(project, classDescriptor)
 
-            executor.submit {
+            coroutineScope.launch {
                 try {
-                    val messages = moduleClient.execute(classDescriptor, httpConfigurationParameters, classCodeBytes, useMainClassLoader)
-                    handleSuccessfulExecution(runToolWindowTab, messages, startTimestamp)
+                    moduleClient.execute(classDescriptor, httpConfigurationParameters, classCodeBytes, useMainClassLoader)
+                        .also { handleSuccessfulExecution(runToolWindowTab, it, startTimestamp) }
+                } catch (e: CancellationException) {
+                    // deliberately omitted. Thrown exception isn't printed because the tab was closed
                 } catch (e: Exception) {
-                    handleFailureExecution(runToolWindowTab, e, startTimestamp)
+                    handleFailedExecution(runToolWindowTab, e, startTimestamp)
                 }
-            }.also { future -> runToolWindowTab.onClose { future.cancel(true) } }
+            }.also { runToolWindowTab.onClose { it.cancel() } }
         } catch (e: Throwable) {
-            handleFailureExecution(runToolWindowTab, e, startTimestamp)
-        } finally {
-            executor.shutdown()
+            handleFailedExecution(runToolWindowTab, e, startTimestamp)
         }
     }
 
@@ -149,23 +157,37 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
         }
     }
 
-    private fun handleFailureExecution(runToolWindowTab: RunToolWindowTab, throwable: Throwable, startTimestamp: Long) {
+    private fun handleFailedExecution(runToolWindowTab: RunToolWindowTab, exception: Throwable, startTimestamp: Long) {
         invokeLater {
-            when (throwable) {
-                is ClientExecutionException -> {
+            when (exception) {
+                is ExecutionException -> {
                     runToolWindowTab.logExecutionTime(currentTimeMillis() - startTimestamp)
                     runToolWindowTab.newLine()
-                    runToolWindowTab.logFailureThrowable(throwable.message!!)
+                    runToolWindowTab.logFailureThrowable(exception.message!!)
                 }
-                is ClientException -> {
+                is HttpException -> {
+                    val statusCode = exception.statusCode
+                    val message = when {
+                        statusCode == HTTP_NOT_FOUND || verifyUnknownResponseCode(exception) -> "Alfresco Content Services or alfresco-jvm-console AMP not found. Check if the given parameters point to the running server and alfresco-jvm-console AMP is installed"
+                        statusCode == HTTP_UNAUTHORIZED -> "Bad credentials. Check if the given user has administrator permissions"
+                        statusCode == HTTP_INTERNAL_ERROR -> "An error occurred on Alfresco Content Services. Check logs for more details"
+                        else -> exception.toFullString()
+                    }
+
                     runToolWindowTab.newLine()
-                    runToolWindowTab.logFailureThrowable(throwable.message!!)
+                    runToolWindowTab.logFailureThrowable(message)
                 }
                 else -> {
                     runToolWindowTab.newLine()
-                    runToolWindowTab.logFailureThrowable(throwable.toFullString())
+                    runToolWindowTab.logFailureThrowable(exception.toFullString())
                 }
             }
         }
+    }
+
+    private fun verifyUnknownResponseCode(exception: HttpException): Boolean {
+        val exceptionString = exception.toFullString()
+        return exception.statusCode == -1 &&
+                (exceptionString.contains(UnknownHostException::class.java.canonicalName) || exceptionString.contains(ConnectException::class.java.canonicalName))
     }
 }

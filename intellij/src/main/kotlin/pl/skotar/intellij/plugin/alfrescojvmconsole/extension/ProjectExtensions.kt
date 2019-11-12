@@ -1,5 +1,7 @@
 package pl.skotar.intellij.plugin.alfrescojvmconsole.extension
 
+import com.intellij.execution.RunnerAndConfigurationSettings
+import com.intellij.execution.impl.RunDialog
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.TextEditor
@@ -20,3 +22,7 @@ fun Project.isFileInAnyModule(file: VirtualFile): Boolean =
 
 private fun Project.getModuleForFile(file: VirtualFile): Module? =
     ModuleManager.getInstance(this).modules.firstOrNull { it.moduleScope.contains(file) }
+
+fun Project.editConfiguration(runnerAndConfigurationSettings: RunnerAndConfigurationSettings) {
+    RunDialog.editConfiguration(this, runnerAndConfigurationSettings, "Edit configuration")
+}
