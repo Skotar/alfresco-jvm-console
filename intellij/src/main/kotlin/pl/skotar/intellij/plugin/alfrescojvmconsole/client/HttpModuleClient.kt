@@ -36,8 +36,9 @@ internal class HttpModuleClient {
     ): List<String> =
         try {
             Fuel.upload(
-                httpConfigurationParameters.getAddress() + EXECUTE_WEBSCRIPT_PATH,
-                parameters = createUrlParameters(classDescriptor.canonicalClassName, classDescriptor.functionName, useMainClassLoader)
+                httpConfigurationParameters.getAddress() +
+                        EXECUTE_WEBSCRIPT_PATH +
+                        createUrlParameters(classDescriptor.canonicalClassName, classDescriptor.functionName, useMainClassLoader)
             )
                 .add(*determineBlobDataParts(classByteCodes))
                 .authentication().basic(httpConfigurationParameters.username, httpConfigurationParameters.password)
@@ -49,12 +50,8 @@ internal class HttpModuleClient {
             throw HttpException(e.response.statusCode, extractMessage(e.errorData), e)
         }
 
-    private fun createUrlParameters(canonicalClassName: String, functionName: String, useMainClassLoader: Boolean): List<Pair<String, Any>> =
-        listOf(
-            PARAMETER_CANONICAL_CLASS_NAME to canonicalClassName,
-            PARAMETER_FUNCTION_NAME to functionName,
-            PARAMETER_USE_MAIN_CLASS_LOADER to useMainClassLoader
-        )
+    private fun createUrlParameters(canonicalClassName: String, functionName: String, useMainClassLoader: Boolean): String =
+        "?$PARAMETER_CANONICAL_CLASS_NAME=$canonicalClassName&$PARAMETER_FUNCTION_NAME=$functionName&$PARAMETER_USE_MAIN_CLASS_LOADER=$useMainClassLoader"
 
     private fun determineBlobDataParts(classByteCodes: List<ClassByteCode>): Array<BlobDataPart> =
         classByteCodes.map { (canonicalClassName, byteCode) ->
