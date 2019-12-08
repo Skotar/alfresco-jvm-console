@@ -25,9 +25,14 @@ internal class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractR
                 isPublicNotStatic(psiMethod) &&
                 hasNoParameters(psiMethod)
             ) {
-                return AlfrescoJvmConsoleLineMarkerInfo(element, createOnClickHandler(project, { getMethodComments(psiMethod) }) {
-                    ClassDescriptor(getPackageName(psiMethod), getClassName(psiMethod), getFunctionName(psiMethod))
-                })
+                return AlfrescoJvmConsoleLineMarkerInfo(
+                    element,
+                    createOnClickHandler(
+                        project,
+                        { getMethodComments(psiMethod) },
+                        { ClassDescriptor(getPackageName(psiMethod), getClassName(psiMethod), getFunctionName(psiMethod)) }
+                    )
+                )
             }
         }
 

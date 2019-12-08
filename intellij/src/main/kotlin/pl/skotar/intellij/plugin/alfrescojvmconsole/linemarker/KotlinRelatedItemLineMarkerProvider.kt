@@ -32,15 +32,13 @@ internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, Abstrac
                 isPublic(ktNamedFunction) &&
                 hasNoParameters(ktNamedFunction)
             ) {
-                val packageName = element.containingKtFile.packageFqName.asString()
-                val className = element.containingClass()?.name
-                return AlfrescoJvmConsoleLineMarkerInfo(element, createOnClickHandler(project, { getMethodComments(ktNamedFunction) }) {
-                    ClassDescriptor(
-                        getPackageName(ktNamedFunction, packageName),
-                        getClassName(ktNamedFunction, className),
-                        getFunctionName(ktNamedFunction)
-                    )
-                })
+                return AlfrescoJvmConsoleLineMarkerInfo(
+                    element,
+                    createOnClickHandler(
+                        project,
+                        { getMethodComments(ktNamedFunction) },
+                        { ClassDescriptor(getPackageName(ktNamedFunction), getClassName(ktNamedFunction), getFunctionName(ktNamedFunction)) })
+                )
             }
         }
 
@@ -67,25 +65,21 @@ internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, Abstrac
     private fun hasNoParameters(function: KtNamedFunction): Boolean =
         function.valueParameterList?.parameters?.size == 0
 
-    private fun getPackageName(function: KtNamedFunction, fallbackPackageName: String): String =
-        try {
-            (function.containingFile as KtFile).packageFqName.asString()
-        } catch (e: Exception) {
-            fallbackPackageName
-        }
+    private fun getPackageName(function: KtNamedFunction): String =
+        (function.containingFile as KtFile).packageFqName.asString()
 
-    private fun getClassName(function: KtNamedFunction, fallbackClassName: String?): String =
-        try {
-            function.containingClass()!!.name!!
-        } catch (e: Exception) {
-            fallbackClassName ?: throw IllegalStateException("Couldn't get class name")
-        }
+    private fun getClassName(function: KtNamedFunction): String =
+        function.containingClass()!!.name!!
 
     private fun getFunctionName(function: KtNamedFunction): String =
         function.name!!
 
     private fun getMethodComments(function: KtNamedFunction): List<String> =
-        (function.bodyBlockExpression!! as ASTNode).children()
-            .filterIsInstance<PsiComment>().map(PsiElement::getText)
-            .toList()
+        try {
+            (function.bodyBlockExpression!! as ASTNode).children()
+                .filterIsInstance<PsiComment>().map(PsiElement::getText)
+                .toList()
+        } catch (e: KotlinNullPointerException) {
+            emptyList()
+        }
 }

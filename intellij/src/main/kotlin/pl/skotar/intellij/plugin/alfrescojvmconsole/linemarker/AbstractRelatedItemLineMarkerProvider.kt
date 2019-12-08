@@ -21,6 +21,7 @@ import pl.skotar.intellij.plugin.alfrescojvmconsole.configuration.AlfrescoJvmCon
 import pl.skotar.intellij.plugin.alfrescojvmconsole.dialog.ConfigurationAlreadyExistsDialog
 import pl.skotar.intellij.plugin.alfrescojvmconsole.dialog.ConfigurationAlreadyExistsDialog.Result.CREATE_NEW
 import pl.skotar.intellij.plugin.alfrescojvmconsole.dialog.ConfigurationAlreadyExistsDialog.Result.USE_SELECTED
+import pl.skotar.intellij.plugin.alfrescojvmconsole.dialog.ErrorDialog
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.*
 import pl.skotar.intellij.plugin.alfrescojvmconsole.toolwindow.*
 import pl.skotar.intellij.plugin.alfrescojvmconsole.util.invokeLater
@@ -43,27 +44,32 @@ internal abstract class AbstractRelatedItemLineMarkerProvider {
         getClassDescriptor: () -> ClassDescriptor
     ): () -> Unit =
         {
-            val runManager = RunManager.getInstance(project)
-            val runnerAndConfigurationSettings =
-                (runManager.getSelectedAlfrescoJvmConsoleRunnerAndConfigurationSettings() ?: showDialogToUseSelectedOrCreateNew(project, runManager))
-
             try {
-                runnerAndConfigurationSettings.checkSettings()
+                val runManager = RunManager.getInstance(project)
+                val runnerAndConfigurationSettings =
+                    (runManager.getSelectedAlfrescoJvmConsoleRunnerAndConfigurationSettings() ?: showDialogToUseSelectedOrCreateNew(project, runManager))
 
-                val classDescriptor = getClassDescriptor()
-                val httpConfigurationParameters =
-                    createHttpConfigurationParameters(runnerAndConfigurationSettings.configuration as AlfrescoJvmConsoleRunConfiguration)
-                val useMainClassLoader = determineUseMainClassLoader(getComments())
+                try {
+                    runnerAndConfigurationSettings.checkSettings()
 
-                CompilerManager.getInstance(project).make(project, project.allModules().toTypedArray()) { aborted, errors, _, _ ->
-                    if (successfulCompilation(aborted, errors)) {
-                        project.getActiveModule().getCompilerOutputFolder().refresh(true, true) {
-                            executeOnAlfresco(project, classDescriptor, httpConfigurationParameters, useMainClassLoader)
+                    val classDescriptor = getClassDescriptor()
+                    val httpConfigurationParameters =
+                        createHttpConfigurationParameters(runnerAndConfigurationSettings.configuration as AlfrescoJvmConsoleRunConfiguration)
+                    val useMainClassLoader = determineUseMainClassLoader(getComments())
+
+                    CompilerManager.getInstance(project).make(project, project.allModules().toTypedArray()) { aborted, errors, _, _ ->
+                        if (successfulCompilation(aborted, errors)) {
+                            project.getActiveModule().getCompilerOutputFolder().refresh(true, true) {
+                                executeOnAlfresco(project, classDescriptor, httpConfigurationParameters, useMainClassLoader)
+                            }
                         }
                     }
+                } catch (e: RuntimeConfigurationException) {
+                    project.editConfiguration(runnerAndConfigurationSettings)
                 }
-            } catch (e: RuntimeConfigurationException) {
-                project.editConfiguration(runnerAndConfigurationSettings)
+            } catch (e: Exception) {
+                ErrorDialog(project, e)
+                    .also(ErrorDialog::show)
             }
         }
 
