@@ -9,6 +9,13 @@ import com.intellij.openapi.vfs.VirtualFile
 fun Project.getActiveModule(): Module =
     getModule(getActiveFile())
 
+fun Project.getActiveFileOrNull(): VirtualFile? =
+    try {
+        getActiveFile()
+    } catch (e: IllegalStateException) {
+        null
+    }
+
 fun Project.getModule(file: VirtualFile): Module =
     getModuleForFile(file) ?: throw IllegalStateException("No active module")
 

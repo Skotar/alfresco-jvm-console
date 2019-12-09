@@ -14,19 +14,20 @@ import org.jetbrains.kotlin.psi.psiUtil.containingClass
 import org.jetbrains.kotlin.psi.psiUtil.isPublic
 import org.jetbrains.kotlin.psi.psiUtil.parents
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassDescriptor
-import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.getActiveFile
+import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.getActiveFileOrNull
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.isFileInAnyModule
 
 internal class KotlinRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedItemLineMarkerProvider() {
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
         val project = element.project
+        val activeFile = project.getActiveFileOrNull() ?: return null
 
         if (isKtNamedFunction(element)) {
             val ktNamedFunction = (element as KtNamedFunction)
 
             if (
-                project.isFileInAnyModule(project.getActiveFile()) &&
+                project.isFileInAnyModule(activeFile) &&
                 startsWithAlfresco(ktNamedFunction) &&
                 isInClass(ktNamedFunction) &&
                 isPublic(ktNamedFunction) &&

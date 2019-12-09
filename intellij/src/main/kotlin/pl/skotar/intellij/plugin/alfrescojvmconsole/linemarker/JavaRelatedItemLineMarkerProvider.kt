@@ -6,14 +6,14 @@ import com.intellij.psi.*
 import com.intellij.psi.impl.source.PsiJavaFileImpl
 import org.jetbrains.kotlin.psi.psiUtil.parents
 import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassDescriptor
-import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.getActiveFile
+import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.getActiveFileOrNull
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.isFileInAnyModule
 
 internal class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedItemLineMarkerProvider() {
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
         val project = element.project
-        val activeFile = project.getActiveFile()
+        val activeFile = project.getActiveFileOrNull() ?: return null
 
         if (isMethod(element)) {
             val psiMethod = (element.parent as PsiMethod)
