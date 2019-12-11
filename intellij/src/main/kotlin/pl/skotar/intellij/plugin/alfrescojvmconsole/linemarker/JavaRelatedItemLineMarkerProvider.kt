@@ -2,14 +2,15 @@ package pl.skotar.intellij.plugin.alfrescojvmconsole.linemarker
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
-import com.intellij.psi.*
-import com.intellij.psi.impl.source.PsiJavaFileImpl
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiIdentifier
+import com.intellij.psi.PsiMethod
 import org.jetbrains.kotlin.psi.psiUtil.parents
-import pl.skotar.intellij.plugin.alfrescojvmconsole.applicationmodel.ClassDescriptor
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.getActiveFileOrNull
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.isFileInAnyModule
 
-internal class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractRelatedItemLineMarkerProvider() {
+internal class JavaRelatedItemLineMarkerProvider : LineMarkerProvider {
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
         val project = element.project
@@ -25,14 +26,7 @@ internal class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractR
                 isPublicNotStatic(psiMethod) &&
                 hasNoParameters(psiMethod)
             ) {
-                return AlfrescoJvmConsoleLineMarkerInfo(
-                    element,
-                    createOnClickHandler(
-                        project,
-                        { getMethodComments(psiMethod) },
-                        { ClassDescriptor(getPackageName(psiMethod), getClassName(psiMethod), getFunctionName(psiMethod)) }
-                    )
-                )
+                return JavaJvmConsoleLineMarkerInfo(psiMethod)
             }
         }
 
@@ -50,27 +44,11 @@ internal class JavaRelatedItemLineMarkerProvider : LineMarkerProvider, AbstractR
         method.name.startsWith("alfresco", true)
 
     private fun isInClass(psiMethod: PsiMethod): Boolean =
-        psiMethod.parents
-            .filterIsInstance<PsiClass>()
-            .count() == 1
+        psiMethod.parents.filterIsInstance<PsiClass>().count() == 1
 
     private fun isPublicNotStatic(method: PsiMethod): Boolean =
         method.modifierList.hasExplicitModifier("public") && !method.modifierList.hasExplicitModifier("static")
 
     private fun hasNoParameters(method: PsiMethod): Boolean =
-        method.parameters.isEmpty()
-
-    private fun getPackageName(method: PsiMethod): String =
-        (method.containingFile as PsiJavaFileImpl).packageName
-
-    private fun getClassName(method: PsiMethod): String =
-        method.containingClass!!.name!!
-
-    private fun getFunctionName(method: PsiMethod): String =
-        method.name
-
-    private fun getMethodComments(method: PsiMethod): List<String> =
-        method
-            .children.filterIsInstance<PsiCodeBlock>().first()
-            .children.filterIsInstance<PsiComment>().map(PsiElement::getText)
+        method.parameterList.parametersCount == 0
 }

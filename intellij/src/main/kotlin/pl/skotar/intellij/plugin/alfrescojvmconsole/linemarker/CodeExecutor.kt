@@ -21,7 +21,6 @@ import pl.skotar.intellij.plugin.alfrescojvmconsole.configuration.AlfrescoJvmCon
 import pl.skotar.intellij.plugin.alfrescojvmconsole.dialog.ConfigurationAlreadyExistsDialog
 import pl.skotar.intellij.plugin.alfrescojvmconsole.dialog.ConfigurationAlreadyExistsDialog.Result.CREATE_NEW
 import pl.skotar.intellij.plugin.alfrescojvmconsole.dialog.ConfigurationAlreadyExistsDialog.Result.USE_SELECTED
-import pl.skotar.intellij.plugin.alfrescojvmconsole.dialog.ErrorDialog
 import pl.skotar.intellij.plugin.alfrescojvmconsole.extension.*
 import pl.skotar.intellij.plugin.alfrescojvmconsole.toolwindow.*
 import pl.skotar.intellij.plugin.alfrescojvmconsole.util.invokeLater
@@ -30,48 +29,34 @@ import java.net.ConnectException
 import java.net.HttpURLConnection.*
 import java.net.UnknownHostException
 
-internal abstract class AbstractRelatedItemLineMarkerProvider {
+internal object CodeExecutor {
 
-    companion object {
-        private val moduleClient = HttpModuleClient()
-    }
-
+    private val moduleClient = HttpModuleClient()
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
-    protected fun createOnClickHandler(
-        project: Project,
-        getComments: () -> List<String>,
-        getClassDescriptor: () -> ClassDescriptor
-    ): () -> Unit =
-        {
-            try {
-                val runManager = RunManager.getInstance(project)
-                val runnerAndConfigurationSettings =
-                    (runManager.getSelectedAlfrescoJvmConsoleRunnerAndConfigurationSettings() ?: showDialogToUseSelectedOrCreateNew(project, runManager))
+    fun execute(project: Project, classDescriptor: ClassDescriptor, comments: List<String>) {
+        val runManager = RunManager.getInstance(project)
+        val runnerAndConfigurationSettings =
+            (runManager.getSelectedAlfrescoJvmConsoleRunnerAndConfigurationSettings() ?: showDialogToUseSelectedOrCreateNew(project, runManager))
 
-                try {
-                    runnerAndConfigurationSettings.checkSettings()
+        try {
+            runnerAndConfigurationSettings.checkSettings()
 
-                    val classDescriptor = getClassDescriptor()
-                    val httpConfigurationParameters =
-                        createHttpConfigurationParameters(runnerAndConfigurationSettings.configuration as AlfrescoJvmConsoleRunConfiguration)
-                    val useMainClassLoader = determineUseMainClassLoader(getComments())
+            val httpConfigurationParameters =
+                createHttpConfigurationParameters(runnerAndConfigurationSettings.configuration as AlfrescoJvmConsoleRunConfiguration)
+            val useMainClassLoader = determineUseMainClassLoader(comments)
 
-                    CompilerManager.getInstance(project).make(project, project.allModules().toTypedArray()) { aborted, errors, _, _ ->
-                        if (successfulCompilation(aborted, errors)) {
-                            project.getActiveModule().getCompilerOutputFolder().refresh(true, true) {
-                                executeOnAlfresco(project, classDescriptor, httpConfigurationParameters, useMainClassLoader)
-                            }
-                        }
+            CompilerManager.getInstance(project).make(project, project.allModules().toTypedArray()) { aborted, errors, _, _ ->
+                if (successfulCompilation(aborted, errors)) {
+                    project.getActiveModule().getCompilerOutputFolder().refresh(true, true) {
+                        executeOnAlfresco(project, classDescriptor, httpConfigurationParameters, useMainClassLoader)
                     }
-                } catch (e: RuntimeConfigurationException) {
-                    project.editConfiguration(runnerAndConfigurationSettings)
                 }
-            } catch (e: Exception) {
-                ErrorDialog(project, e)
-                    .also(ErrorDialog::show)
             }
+        } catch (e: RuntimeConfigurationException) {
+            project.editConfiguration(runnerAndConfigurationSettings)
         }
+    }
 
     private fun showDialogToUseSelectedOrCreateNew(project: Project, runManager: RunManager): RunnerAndConfigurationSettings {
         val configurations = runManager.getAlfrescoJvmConsoleRunnerAndConfigurationSettings()
