@@ -1,13 +1,12 @@
 version: '3.4'
 services:
-#  Optional
-#  alfresco-jvm-console-share:
-#    image: ${docker.share.image}:${alfresco.share.version}
-#    environment:
-#      REPO_HOST: alfresco-jvm-console-acs
-#      REPO_PORT: 8080
-#    ports:
-#      - "${share.port}:8080"
+  alfresco-jvm-console-share:
+    image: ${docker.share.image}:${alfresco.share.version}
+    environment:
+      REPO_HOST: alfresco-jvm-console-acs
+      REPO_PORT: 8080
+    ports:
+      - "${share.port}:8080"
   alfresco-jvm-console-acs:
     image: alfresco-content-services-alfresco-jvm-console:development
     build:
