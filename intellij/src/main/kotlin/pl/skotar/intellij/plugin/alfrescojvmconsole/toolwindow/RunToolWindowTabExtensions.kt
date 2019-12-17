@@ -20,6 +20,8 @@ internal fun RunToolWindowTab.logExecutionTime(executionTimeMillis: Long) {
 }
 
 internal fun RunToolWindowTab.logSuccess(messages: List<String>) {
+    setIcon(AllIcons.RunConfigurations.TestPassed)
+
     messages.forEach {
         print(it, ConsoleViewContentType.USER_INPUT)
         println()
@@ -29,6 +31,7 @@ internal fun RunToolWindowTab.logSuccess(messages: List<String>) {
 
 internal fun RunToolWindowTab.logFailureThrowable(exceptionString: String) {
     setIcon(AllIcons.RunConfigurations.TestError)
+
     if (notEndsWithDoubleNewLine()) {
         println()
     }
