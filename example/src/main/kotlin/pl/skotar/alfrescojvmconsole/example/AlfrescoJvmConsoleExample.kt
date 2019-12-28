@@ -1,4 +1,4 @@
-package pl.beone.alfrescojvmconsole.example
+package pl.skotar.alfrescojvmconsole.example
 
 import org.alfresco.model.ContentModel.PROP_CONTENT
 import org.alfresco.model.ContentModel.TYPE_CONTENT

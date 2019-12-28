@@ -1,4 +1,4 @@
-package pl.beone.alfrescojvmconsole.example;
+package pl.skotar.alfrescojvmconsole.example;
 
 import org.alfresco.repo.nodelocator.CompanyHomeNodeLocator;
 import org.alfresco.service.ServiceRegistry;
